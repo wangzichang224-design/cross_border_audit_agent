@@ -31,7 +31,7 @@ from config import (
     RAW_DATA_DIR,
     REPORTS_DIR,
 )
-from src.data_ingestion import generate_transactions, save_raw_data
+from src.data_ingestion import generate_transactions, save_raw_data, generate_settlement_schedule
 from src.cleaning import DataCleaner
 from src.audit import RuleBasedAnomalyDetector
 from src.reporting import ReportGenerator, ReportVisualizer
@@ -94,11 +94,11 @@ with st.sidebar:
         n_days = st.slider("模拟天数", 30, 180, 90, step=30)
         st.info(
             f"生成 **2024-10-01** 起 **{n_days} 天**数据\n\n"
-            "**审计主体:** 星辰跨境科技（深圳）\n\n"
+            "**审计主体:** 安克创新股份有限公司\n\n"
             "**内置异常场景:**\n"
             "- 🛍️ 黑五大额结算批次\n"
             "- 📢 双11广告投放超支\n"
-            "- 📦 SKU质量召回退款浪潮\n"
+            "- 📦 SKU A2342质量召回退款\n"
             "- 💱 未授权FX转换操作\n"
             "- 🗄️ ERP迁移数据缺口\n"
             "- 📋 会计系统重复入账"
@@ -134,8 +134,8 @@ st.title("🔍 跨境电商资金流 AI 审计系统")
 # Company profile card
 st.markdown("""
 <div style="background:#f0f4ff;border:1px solid #c7d7ff;border-radius:8px;padding:12px 20px;margin-bottom:8px;">
-<b>审计主体：</b>星辰跨境科技（深圳）有限公司 &nbsp;·&nbsp;
-<b>业务范围：</b>Amazon US / EU · TikTok Shop · Shopify · eBay 五平台跨境销售 &nbsp;·&nbsp;
+<b>审计主体：</b>安克创新股份有限公司（Anker Innovations Limited）&nbsp;·&nbsp;
+<b>业务范围：</b>Amazon US / EU / JP · TikTok Shop · Shopify · Walmart · eBay 七平台跨境销售 &nbsp;·&nbsp;
 <b>合规框架：</b>ISA 240（舞弊风险）· ISA 520（分析程序）
 </div>
 """, unsafe_allow_html=True)
@@ -206,8 +206,9 @@ if run_clicked:
         # Stage 4 ── AI
         ai_narrative = ""
         ai_result = {}
+        recon_result = {}
         if enable_ai and api_key_input:
-            st.write("🤖 **Stage 4/5** — DeepSeek AI 深度分析（可能需 30–60 秒）...")
+            st.write("🤖 **Stage 4/6** — DeepSeek AI 深度分析（可能需 30–60 秒）...")
             try:
                 classifier = DeepSeekClassifier(api_key=api_key_input)
                 df_clean = classifier.classify_unclassified(df_clean)
@@ -228,12 +229,27 @@ if run_clicked:
             except Exception as e:
                 st.warning(f"   ⚠️ AI 调用失败: {e}")
                 ai_narrative = f"_AI 分析暂时不可用（{e}）。以下为规则引擎报告。_"
+
+            # Stage 4b ── Settlement Reconciliation
+            st.write("🔗 **Stage 4b/6** — 应收 / 实收资金核对...")
+            try:
+                schedule = generate_settlement_schedule(df_clean)
+                recon_result = analyst.reconcile_settlements(schedule)
+                recon_status = recon_result.get("reconciliation_status", "ERROR")
+                n_unreconciled = len(recon_result.get("unreconciled_items", []))
+                st.write(
+                    f"   ✅ 核对完成: **{recon_status}** — "
+                    f"发现 **{n_unreconciled}** 条未核项"
+                )
+            except Exception as e:
+                st.warning(f"   ⚠️ 资金核对失败: {e}")
+                recon_result = {}
         else:
-            st.write("   ⏭️ **Stage 4/5** — AI 分析已跳过（离线模式）")
+            st.write("   ⏭️ **Stage 4/6** — AI 分析已跳过（离线模式）")
             ai_narrative = "_未启用 AI 分析。在侧边栏开启 DeepSeek 可获得 AI 叙述报告。_"
 
         # Stage 5 ── Report
-        st.write("📊 **Stage 5/5** — 生成可视化图表与报告...")
+        st.write("📊 **Stage 5/6** — 生成可视化图表与报告...")
         viz = ReportVisualizer(output_dir=str(run_dir))
         chart_paths = viz.generate_all(df_clean, findings)
 
@@ -250,6 +266,9 @@ if run_clicked:
         df_clean.to_csv(proc_path, index=False, encoding="utf-8-sig")
         st.write(f"   ✅ 报告已保存至 `{run_dir.name}/`")
 
+        # Stage 6 ── Done
+        st.write("🏁 **Stage 6/6** — 完成")
+
         pipeline_status.update(label="✅ 审计完成！", state="complete")
 
     st.session_state["audit"] = {
@@ -261,6 +280,7 @@ if run_clicked:
         "proc_path": str(proc_path),
         "ai_narrative": ai_narrative,
         "ai_result": ai_result,
+        "recon_result": recon_result,
         "run_id": run_id,
     }
 
@@ -282,6 +302,7 @@ report_path = audit["report_path"]
 proc_path   = audit["proc_path"]
 ai_narrative = audit["ai_narrative"]
 ai_result   = audit["ai_result"]
+recon_result = audit.get("recon_result", {})
 run_id      = audit["run_id"]
 
 # ── KPI row ──────────────────────────────────────────────────────────────────
@@ -351,6 +372,26 @@ with right:
                     </div>""",
                     unsafe_allow_html=True,
                 )
+
+    # Reconciliation results
+    if recon_result and "unreconciled_items" in recon_result:
+        recon_status = recon_result.get("reconciliation_status", "N/A")
+        items = recon_result.get("unreconciled_items", [])
+        status_color = {"BALANCED": "🟢", "PARTIAL": "🟡", "UNBALANCED": "🔴"}.get(recon_status, "⚪")
+        with st.expander(f"🔗 资金核对结果 {status_color} {recon_status}（{len(items)} 条未核项）", expanded=True):
+            for item in items:
+                flag = "⚠️" if item.get("requires_followup") else "ℹ️"
+                direction = "↑ 流入" if item.get("direction") == "inflow" else "↓ 流出"
+                st.markdown(
+                    f"{flag} **{item.get('item','')}** &nbsp; {direction} &nbsp; "
+                    f"`${item.get('amount_usd', 0):,.0f}` &nbsp;·&nbsp; "
+                    f"{item.get('explanation','')}"
+                )
+            issues = recon_result.get("chain_integrity_issues", [])
+            if issues:
+                st.markdown("**资金链完整性问题：**")
+                for iss in issues:
+                    st.markdown(f"- {iss}")
 
     # Data quality
     st.subheader("📋 数据质量摘要")

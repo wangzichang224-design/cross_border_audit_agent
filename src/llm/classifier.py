@@ -13,6 +13,7 @@ from .prompts import (
     CLASSIFY_TRANSACTIONS_PROMPT,
     ANOMALY_DETECTION_PROMPT,
     REPORT_GENERATION_PROMPT,
+    RECONCILIATION_PROMPT,
 )
 
 logger = logging.getLogger(__name__)
@@ -171,6 +172,36 @@ class LLMAuditAnalyst:
         except json.JSONDecodeError:
             logger.error(f"Failed to parse anomaly analysis response:\n{raw[:500]}")
             return {"error": "Parse failure", "raw": raw[:200]}
+
+    def reconcile_settlements(self, schedule: dict) -> dict:
+        """Compare expected vs actual settlements and flag discrepancies."""
+        import json as _json
+        reconciliation_data = _json.dumps(schedule, indent=2, ensure_ascii=False, default=str)
+        prompt = RECONCILIATION_PROMPT.format(reconciliation_data=reconciliation_data)
+
+        try:
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=2048,
+                system=[{
+                    "type": "text",
+                    "text": (
+                        "You are a forensic accountant performing fund flow reconciliation. "
+                        "Return valid JSON only. No markdown wrappers."
+                    ),
+                    "cache_control": {"type": "ephemeral"},
+                }],
+                messages=[{"role": "user", "content": prompt}],
+            )
+            raw = response.content[0].text.strip()
+            if raw.startswith("```"):
+                raw = raw.split("```")[1]
+                if raw.startswith("json"):
+                    raw = raw[4:]
+            return _json.loads(raw)
+        except Exception as e:
+            logger.error(f"Reconciliation analysis failed: {e}")
+            return {"error": str(e), "reconciliation_status": "ERROR"}
 
     def generate_report(self, report_data: dict) -> str:
         """Generate a Markdown executive report using Claude."""

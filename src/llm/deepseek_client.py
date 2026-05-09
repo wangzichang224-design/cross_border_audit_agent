@@ -10,7 +10,7 @@ import logging
 import pandas as pd
 from openai import OpenAI
 
-from .prompts import CLASSIFY_TRANSACTIONS_PROMPT, ANOMALY_DETECTION_PROMPT
+from .prompts import CLASSIFY_TRANSACTIONS_PROMPT, ANOMALY_DETECTION_PROMPT, RECONCILIATION_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -128,3 +128,33 @@ class DeepSeekAuditAnalyst:
         except Exception as e:
             logger.error(f"DeepSeek audit analysis failed: {e}")
             return {"error": str(e), "summary_narrative": f"AI 分析暂时不可用: {e}"}
+
+    def reconcile_settlements(self, schedule: dict) -> dict:
+        """Compare expected vs actual settlements and flag discrepancies."""
+        reconciliation_data = json.dumps(schedule, indent=2, ensure_ascii=False, default=str)
+        prompt = RECONCILIATION_PROMPT.format(reconciliation_data=reconciliation_data)
+
+        try:
+            resp = self.client.chat.completions.create(
+                model=self.model,
+                max_tokens=2048,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a forensic accountant performing fund flow reconciliation. "
+                            "Return valid JSON only. No markdown wrappers."
+                        ),
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+            )
+            raw = resp.choices[0].message.content.strip()
+            if raw.startswith("```"):
+                raw = raw.split("```")[1]
+                if raw.startswith("json"):
+                    raw = raw[4:]
+            return json.loads(raw)
+        except Exception as e:
+            logger.error(f"DeepSeek reconciliation failed: {e}")
+            return {"error": str(e), "reconciliation_status": "ERROR"}

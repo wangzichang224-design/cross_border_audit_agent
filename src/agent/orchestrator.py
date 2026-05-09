@@ -30,7 +30,7 @@ from config import (
     ANTHROPIC_API_KEY, CLAUDE_MODEL, ANOMALY_THRESHOLDS,
     RAW_DATA_DIR, PROCESSED_DATA_DIR, REPORTS_DIR,
 )
-from src.data_ingestion import generate_transactions, save_raw_data
+from src.data_ingestion import generate_transactions, save_raw_data, generate_settlement_schedule
 from src.cleaning import DataCleaner
 from src.audit import RuleBasedAnomalyDetector
 from src.llm import LLMClassifier, LLMAuditAnalyst
@@ -106,20 +106,34 @@ class AuditAgentOrchestrator:
         # STAGE 4: LLM Analysis
         # ─────────────────────────────────────
         if not self.offline_mode:
-            with console.status("[bold cyan]Stage 4/5: LLM classification & AI audit analysis...[/bold cyan]"):
+            with console.status("[bold cyan]Stage 4/6: LLM classification & AI audit analysis...[/bold cyan]"):
                 df_clean, ai_audit_result = self._stage_llm_analysis(df_clean, detector)
                 results["ai_findings"] = ai_audit_result
                 console.print("[green]OK LLM analysis complete[/green]")
             ai_narrative = ai_audit_result.get("summary_narrative", "")
+
+            # ─────────────────────────────────────
+            # STAGE 4b: Settlement Reconciliation
+            # ─────────────────────────────────────
+            with console.status("[bold cyan]Stage 4b/6: Settlement reconciliation...[/bold cyan]"):
+                recon_result = self._stage_reconciliation(df_clean)
+                results["reconciliation"] = recon_result
+                status = recon_result.get("reconciliation_status", "ERROR")
+                unreconciled = len(recon_result.get("unreconciled_items", []))
+                console.print(
+                    f"[green]OK Reconciliation: {status} — "
+                    f"{unreconciled} unreconciled item(s)[/green]"
+                )
         else:
             console.print("[yellow][!] Stage 4: LLM skipped (offline mode)[/yellow]")
             ai_narrative = "_AI narrative unavailable in offline mode. Set ANTHROPIC_API_KEY to enable._"
             results["ai_findings"] = {}
+            results["reconciliation"] = {}
 
         # ─────────────────────────────────────
         # STAGE 5: Report Generation
         # ─────────────────────────────────────
-        with console.status("[bold cyan]Stage 5/5: Generating visualizations & report...[/bold cyan]"):
+        with console.status("[bold cyan]Stage 5/6: Generating visualizations & report...[/bold cyan]"):
             report_path = self._stage_report(
                 df_clean, findings, ai_narrative, quality_report.stats
             )
@@ -173,6 +187,11 @@ class AuditAgentOrchestrator:
             thresholds=ANOMALY_THRESHOLDS,
         )
         return df, ai_result
+
+    def _stage_reconciliation(self, df: pd.DataFrame) -> dict:
+        schedule = generate_settlement_schedule(df)
+        analyst = LLMAuditAnalyst(api_key=self.api_key, model=CLAUDE_MODEL)
+        return analyst.reconcile_settlements(schedule)
 
     def _stage_report(
         self,
