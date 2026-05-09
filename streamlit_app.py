@@ -37,10 +37,6 @@ from src.audit import RuleBasedAnomalyDetector
 from src.reporting import ReportGenerator, ReportVisualizer
 from src.llm.deepseek_client import DeepSeekClassifier, DeepSeekAuditAnalyst
 
-# Ensure output dirs exist
-RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
-REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-
 logging.basicConfig(level=logging.INFO)
 
 # ── Page config ──────────────────────────────────────────────────────────────

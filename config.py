@@ -1,14 +1,30 @@
 """Global configuration for the Cross-border E-commerce Audit Agent."""
 
 import os
+import tempfile
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent
-DATA_DIR = BASE_DIR / "data"
-RAW_DATA_DIR = DATA_DIR / "raw"
-PROCESSED_DATA_DIR = DATA_DIR / "processed"
-REPORTS_DIR = BASE_DIR / "reports"
 PROMPTS_DIR = BASE_DIR / "prompts"
+
+# Streamlit Cloud mounts source code read-only at /mount/src/.
+# Fall back to /tmp for any directories we need to write at runtime.
+def _writable(path: Path) -> Path:
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+        probe = path / ".write_probe"
+        probe.touch()
+        probe.unlink()
+        return path
+    except (OSError, PermissionError):
+        alt = Path(tempfile.gettempdir()) / "cross_border_audit" / path.relative_to(BASE_DIR)
+        alt.mkdir(parents=True, exist_ok=True)
+        return alt
+
+DATA_DIR           = _writable(BASE_DIR / "data")
+RAW_DATA_DIR       = _writable(BASE_DIR / "data" / "raw")
+PROCESSED_DATA_DIR = _writable(BASE_DIR / "data" / "processed")
+REPORTS_DIR        = _writable(BASE_DIR / "reports")
 
 # Anthropic API
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
