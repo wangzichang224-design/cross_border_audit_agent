@@ -29,12 +29,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from config import (
     ANTHROPIC_API_KEY, CLAUDE_MODEL, ANOMALY_THRESHOLDS,
+    DEEPSEEK_API_KEY,
     RAW_DATA_DIR, PROCESSED_DATA_DIR, REPORTS_DIR,
 )
 from src.data_ingestion import generate_transactions, save_raw_data, generate_settlement_schedule
 from src.cleaning import DataCleaner
 from src.audit import RuleBasedAnomalyDetector
-from src.llm import LLMClassifier, LLMAuditAnalyst
+from src.llm import LLMClassifier, LLMAuditAnalyst, DeepSeekClassifier, DeepSeekAuditAnalyst
 from src.reporting import ReportGenerator, ReportVisualizer
 
 logger = logging.getLogger(__name__)
@@ -48,7 +49,20 @@ class AuditAgentOrchestrator:
     """
 
     def __init__(self, api_key: str = None, offline_mode: bool = False):
-        self.api_key = api_key or ANTHROPIC_API_KEY
+        # Auto-detect provider: explicit key > Anthropic env > DeepSeek env > offline
+        if api_key:
+            self.api_key = api_key
+            self.provider = "anthropic"
+        elif ANTHROPIC_API_KEY:
+            self.api_key = ANTHROPIC_API_KEY
+            self.provider = "anthropic"
+        elif DEEPSEEK_API_KEY:
+            self.api_key = DEEPSEEK_API_KEY
+            self.provider = "deepseek"
+        else:
+            self.api_key = ""
+            self.provider = "none"
+
         self.offline_mode = offline_mode or (not self.api_key)
         self.run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -56,6 +70,8 @@ class AuditAgentOrchestrator:
             console.print(
                 "[yellow][!] Running in OFFLINE MODE -- LLM steps will be skipped.[/yellow]"
             )
+        else:
+            console.print(f"[cyan][i] LLM provider: {self.provider.upper()}[/cyan]")
 
     def run(
         self,
@@ -173,9 +189,19 @@ class AuditAgentOrchestrator:
         findings = detector.run_all_checks(df)
         return findings, detector
 
+    def _make_classifier(self):
+        if self.provider == "deepseek":
+            return DeepSeekClassifier(api_key=self.api_key)
+        return LLMClassifier(api_key=self.api_key, model=CLAUDE_MODEL)
+
+    def _make_analyst(self):
+        if self.provider == "deepseek":
+            return DeepSeekAuditAnalyst(api_key=self.api_key)
+        return LLMAuditAnalyst(api_key=self.api_key, model=CLAUDE_MODEL)
+
     def _stage_llm_analysis(self, df: pd.DataFrame, detector: RuleBasedAnomalyDetector):
-        classifier = LLMClassifier(api_key=self.api_key, model=CLAUDE_MODEL)
-        analyst = LLMAuditAnalyst(api_key=self.api_key, model=CLAUDE_MODEL)
+        classifier = self._make_classifier()
+        analyst = self._make_analyst()
 
         # Pre-compute summary from raw df — classifier only adds new columns, no conflict
         summary_json = json.dumps(detector.to_summary_dict(df), indent=2, default=str)
@@ -195,7 +221,7 @@ class AuditAgentOrchestrator:
 
     def _stage_reconciliation(self, df: pd.DataFrame) -> dict:
         schedule = generate_settlement_schedule(df)
-        analyst = LLMAuditAnalyst(api_key=self.api_key, model=CLAUDE_MODEL)
+        analyst = self._make_analyst()
         return analyst.reconcile_settlements(schedule)
 
     def _stage_report(
