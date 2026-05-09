@@ -1,10 +1,6 @@
 [browser]
 gatherUsageStats = false
 
-[server]
-headless = true
-port = 8520
-
 [theme]
 primaryColor = "#2563EB"
 backgroundColor = "#FFFFFF"
