@@ -28,6 +28,15 @@ Your task is to classify the following unclassified transaction descriptions int
 - VAT / Tax Remittance
 - Unclassified  ← use ONLY when genuinely ambiguous
 
+## Fee Rate Reference (use for reasonableness validation)
+- Amazon FBA Fee: 10–20% of product revenue
+- Platform Commission: Amazon 8–15%, TikTok 5–8%, Shopify 0.5–2%, eBay 10–12%
+- Advertising Spend: typically 5–15% of gross revenue
+- Payment Processing Fee: 1–3% of transaction value
+- Logistics & Freight: 5–15% of shipment value
+- Warehouse Storage Fee: < 5% of revenue
+If an amount is inconsistent with these benchmarks, lower the confidence or set risk_flag: true.
+
 ## Transactions to Classify
 {transactions_json}
 
@@ -171,7 +180,8 @@ PROMPT_VERSIONS = {
         "v1.0": "Basic classification without confidence scores — accuracy ~72%",
         "v1.1": "Added confidence scoring and rationale — accuracy ~81%",
         "v1.2": "Added fraud risk_flag and 'Unclassified' escape hatch — accuracy ~89%",
-        "v2.0": "Current: Added ISA-aligned context and per-platform fee rate anchors — accuracy ~94%",
+        "v2.0": "Added ISA-aligned context — accuracy ~94%",
+        "v2.1": "Current: Added per-platform fee rate anchors for reasonableness validation",
     },
     "anomaly_detection": {
         "v1.0": "Generic outlier detection — too many false positives (~40%)",

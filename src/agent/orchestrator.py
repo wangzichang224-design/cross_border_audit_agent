@@ -11,6 +11,7 @@ import json
 import logging
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from datetime import datetime
 
@@ -173,19 +174,23 @@ class AuditAgentOrchestrator:
         return findings, detector
 
     def _stage_llm_analysis(self, df: pd.DataFrame, detector: RuleBasedAnomalyDetector):
-        # 4a. Classify unclassified transactions
         classifier = LLMClassifier(api_key=self.api_key, model=CLAUDE_MODEL)
-        df = classifier.classify_unclassified(df)
-
-        # 4b. AI audit analysis
         analyst = LLMAuditAnalyst(api_key=self.api_key, model=CLAUDE_MODEL)
-        summary = detector.to_summary_dict(df)
-        summary_json = json.dumps(summary, indent=2, default=str)
 
-        ai_result = analyst.analyze_anomalies(
-            summary_json=summary_json,
-            thresholds=ANOMALY_THRESHOLDS,
-        )
+        # Pre-compute summary from raw df — classifier only adds new columns, no conflict
+        summary_json = json.dumps(detector.to_summary_dict(df), indent=2, default=str)
+
+        # Classify and analyze run concurrently (no data dependency between them)
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            future_classify = executor.submit(classifier.classify_unclassified, df)
+            future_analyze = executor.submit(
+                analyst.analyze_anomalies,
+                summary_json=summary_json,
+                thresholds=ANOMALY_THRESHOLDS,
+            )
+            df = future_classify.result()
+            ai_result = future_analyze.result()
+
         return df, ai_result
 
     def _stage_reconciliation(self, df: pd.DataFrame) -> dict:
