@@ -4,6 +4,8 @@ __all__ = [
     "agents",
     "config",
     "data_tools",
+    "hybrid_retriever",
     "rag",
+    "reranker",
     "reporting",
 ]

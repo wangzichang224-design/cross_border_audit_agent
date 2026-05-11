@@ -45,6 +45,10 @@ class Settings:
     local_knowledge_dir: Path
     chroma_dir: Path
     reports_dir: Path
+    # Retrieval upgrades (Phase: advanced RAG)
+    rag_enable_hybrid: bool
+    rag_enable_rerank: bool
+    rag_reranker_model: str
 
 
 def get_settings() -> Settings:
@@ -71,7 +75,23 @@ def get_settings() -> Settings:
         local_knowledge_dir=PROJECT_ROOT / "knowledge_sources",
         chroma_dir=PROJECT_ROOT / "data" / "chroma_audit_rules",
         reports_dir=reports_dir,
+        rag_enable_hybrid=_env_bool("RAG_ENABLE_HYBRID", default=True),
+        rag_enable_rerank=_env_bool("RAG_ENABLE_RERANK", default=False),
+        rag_reranker_model=os.getenv("RAG_RERANKER_MODEL", "BAAI/bge-reranker-base"),
     )
+
+
+def _env_bool(name: str, *, default: bool) -> bool:
+    """Parse boolean-ish env vars (1/true/yes/on are True; everything else False).
+
+    Hybrid is ON by default because BM25 has no extra dependency and improves
+    accuracy on准则编号 lookups. Rerank is OFF by default because the model
+    weights are ~280 MB and must be downloaded on first use.
+    """
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on", "y"}
 
 
 def build_llm_config(settings: Settings) -> dict:

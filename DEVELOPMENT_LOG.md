@@ -1,5 +1,47 @@
 # 开发留痕
 
+## 2026-05-11
+
+### RAG 升级: Hybrid Search + Cross-Encoder Rerank
+
+**痛点定位**
+- 原检索链路是 `ChromaDB 向量召回 → keyword fallback`。
+- 纯向量检索对**审计准则编号**（"第 1141 号"、"ISA 240"）这种字面 token 召回率低。
+- Legacy keyword fallback 的分词器把整段中文当一个 token，短查询根本匹配不上。
+
+**改动**
+- 新增 `audit_rag/hybrid_retriever.py`:
+  - `BM25Retriever` — 优先使用 `rank_bm25`，未安装时自动降级到内置纯 Python BM25。
+  - `tokenize_for_bm25()` — CJK unigram + bigram + 字母数字 run 整体保留（保护 "1141 号"、"ISA240" 不被切碎）。
+  - `reciprocal_rank_fusion()` — RRF 合并多路召回结果，无需对齐分数尺度。
+  - `run_hybrid_search()` — 编排 BM25 + 向量检索；任一路失败自动降级。
+- 新增 `audit_rag/reranker.py`:
+  - `CrossEncoderReranker` — 默认 `BAAI/bge-reranker-base`，懒加载，加载失败时透传输入。
+- 改造 `AuditKnowledgeBase.search()`:
+  - 新增 `enable_hybrid` / `enable_rerank` 构造参数。
+  - 三段式路由: hybrid (新) → 纯向量 (legacy) → keyword fallback (legacy)。
+  - 默认 `enable_hybrid=True`（BM25 零额外依赖）、`enable_rerank=False`（reranker 模型~280MB）。
+- `audit_rag/config.py` 新增三个环境变量开关:
+  - `RAG_ENABLE_HYBRID`（默认 on）
+  - `RAG_ENABLE_RERANK`（默认 off）
+  - `RAG_RERANKER_MODEL`（默认 `BAAI/bge-reranker-base`）
+- `audit_rag/pipeline.py` 把上述配置接到 `AuditKnowledgeBase`。
+- `requirements.txt` 新增 `rank-bm25>=0.2.2`（可选，pure-python 已有 fallback）。
+
+**测试**
+- 新增 `tests/test_hybrid_retriever.py`，16 个测试覆盖:
+  - 分词正确性（CJK bigram、字母数字保留、跨脚本不组对）
+  - BM25 召回（准则编号定位、空查询、top-k、严格正分）
+  - RRF 合并（共识优先、top-k 截断、按 chunk_id 去重）
+  - 集成（向量失败容错、hybrid > legacy 在短查询上的提升）
+- 全部通过；不依赖 `rank_bm25` / `sentence-transformers` / `chromadb` 即可跑。
+- 端到端 smoke test：`run_audit_pipeline(mode='mock')` 在 hybrid 默认开启下正常返回 4 chunks。
+
+**面试讲点**
+- 纯向量检索在 audit 领域有结构性缺陷：会计准则编号是字符串而非语义。
+- 用 BM25 + 向量混合 + RRF 合并 + cross-encoder 重排的工程手段补偿模型局限。
+- 全链路 graceful degradation，每一层依赖都可缺失而不破坏 mock 模式。
+
 ## 2026-04-12
 
 ### FinRobot 参考优化

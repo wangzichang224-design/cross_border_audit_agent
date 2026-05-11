@@ -27,16 +27,48 @@ def _tokenize_zh(text: str) -> set[str]:
 
 
 class AuditKnowledgeBase:
-    """ChromaDB/bge-backed retriever with a keyword fallback for lightweight demos."""
+    """ChromaDB/bge-backed retriever with a keyword fallback for lightweight demos.
 
-    def __init__(self, knowledge_dir: Path | Iterable[Path], chroma_dir: Path, embedding_model: str = "BAAI/bge-small-zh-v1.5"):
+    Retrieval modes (controlled via constructor flags; defaults preserve old behavior):
+
+    1. ``enable_hybrid=False``, ``enable_rerank=False`` (default):
+       Vector search if ChromaDB is built, else legacy keyword fallback.
+       Identical to behavior prior to the hybrid-retrieval upgrade.
+
+    2. ``enable_hybrid=True``:
+       BM25 ∪ ChromaDB merged via Reciprocal Rank Fusion. BM25 is built once
+       at init time over the same local chunk corpus. Recommended for audit
+       work because准则编号 ("第 1141 号"、"ISA 240") are literal strings vector
+       models under-rank.
+
+    3. ``enable_rerank=True``:
+       Append a cross-encoder rerank stage (BAAI/bge-reranker-base by default)
+       over the top fused candidates. Fails soft if the model can't load.
+    """
+
+    def __init__(
+        self,
+        knowledge_dir: Path | Iterable[Path],
+        chroma_dir: Path,
+        embedding_model: str = "BAAI/bge-small-zh-v1.5",
+        *,
+        enable_hybrid: bool = False,
+        enable_rerank: bool = False,
+        reranker_model: str = "BAAI/bge-reranker-base",
+    ):
         if isinstance(knowledge_dir, Path):
             self.knowledge_dirs = [knowledge_dir]
         else:
             self.knowledge_dirs = [Path(path) for path in knowledge_dir]
         self.chroma_dir = chroma_dir
         self.embedding_model = embedding_model
+        self.enable_hybrid = enable_hybrid
+        self.enable_rerank = enable_rerank
+        self.reranker_model = reranker_model
         self._fallback_chunks = self._load_local_chunks()
+        # Lazy-built artifacts (instantiated on first hybrid/rerank call).
+        self._bm25 = None
+        self._reranker = None
 
     def _load_local_chunks(self) -> list[RetrievedChunk]:
         chunks = self._load_text_chunks()
@@ -110,10 +142,65 @@ class AuditKnowledgeBase:
         return chunks
 
     def search(self, query: str, top_k: int = 4) -> list[RetrievedChunk]:
+        """Top-level retrieval entry point. Routing:
+
+        - If ``enable_hybrid`` → BM25 ∪ vector, RRF-fused, optional rerank.
+        - Else if ChromaDB built → pure vector (legacy path).
+        - Else → keyword fallback (legacy path).
+        """
+        if self.enable_hybrid:
+            results = self._hybrid_search(query, fused_top_k=max(top_k * 4, 20))
+            if self.enable_rerank and results:
+                results = self._rerank(query, results, top_k=top_k)
+            return results[:top_k]
+
         chroma_results = self._try_chroma_search(query, top_k)
         if chroma_results:
+            if self.enable_rerank:
+                chroma_results = self._rerank(query, chroma_results, top_k=top_k)
             return chroma_results
-        return self._keyword_search(query, top_k)
+        keyword_results = self._keyword_search(query, top_k)
+        if self.enable_rerank and keyword_results:
+            keyword_results = self._rerank(query, keyword_results, top_k=top_k)
+        return keyword_results
+
+    # ── Hybrid + rerank helpers ─────────────────────────────────────────────
+
+    def _get_bm25(self):
+        if self._bm25 is None:
+            from .hybrid_retriever import BM25Retriever
+
+            self._bm25 = BM25Retriever(self._fallback_chunks)
+        return self._bm25
+
+    def _get_reranker(self):
+        if self._reranker is None:
+            from .reranker import get_default_reranker
+
+            self._reranker = get_default_reranker(self.reranker_model)
+        return self._reranker
+
+    def _hybrid_search(self, query: str, fused_top_k: int) -> list[RetrievedChunk]:
+        from .hybrid_retriever import HybridSearchPlan, run_hybrid_search
+
+        bm25 = self._get_bm25()
+        plan = HybridSearchPlan(
+            vector_top_k=max(fused_top_k, 20),
+            bm25_top_k=max(fused_top_k, 20),
+            fused_top_k=fused_top_k,
+        )
+        return run_hybrid_search(
+            query,
+            bm25=bm25,
+            vector_search=self._try_chroma_search,
+            plan=plan,
+        )
+
+    def _rerank(
+        self, query: str, candidates: list[RetrievedChunk], top_k: int
+    ) -> list[RetrievedChunk]:
+        reranker = self._get_reranker()
+        return reranker.rerank(query, candidates, top_k=top_k)
 
     def _keyword_search(self, query: str, top_k: int) -> list[RetrievedChunk]:
         query_terms = _tokenize_zh(query)

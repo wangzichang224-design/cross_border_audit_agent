@@ -8,6 +8,11 @@ sentence-transformers>=3.0.0
 langchain>=0.2.0
 llama-index>=0.10.0
 
+# Phase 2.5: Hybrid retrieval (BM25). Pure-Python fallback exists in
+# audit_rag.hybrid_retriever if this package is unavailable, but installing
+# it gives a ~10x speed-up on larger corpora.
+rank-bm25>=0.2.2
+
 # Data/PDF parsing
 pandas>=2.0.0
 openpyxl>=3.1.0

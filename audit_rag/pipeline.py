@@ -67,7 +67,13 @@ def run_audit_pipeline(
     else:
         findings = analyze_vouchers(vouchers)
 
-    kb = AuditKnowledgeBase([settings.sample_knowledge_dir, settings.local_knowledge_dir], settings.chroma_dir)
+    kb = AuditKnowledgeBase(
+        [settings.sample_knowledge_dir, settings.local_knowledge_dir],
+        settings.chroma_dir,
+        enable_hybrid=settings.rag_enable_hybrid,
+        enable_rerank=settings.rag_enable_rerank,
+        reranker_model=settings.rag_reranker_model,
+    )
     effective_query = rag_query.strip() or build_rag_query(effective_description, preset["rag_keywords"])
     rag_chunks = kb.search(effective_query, top_k=settings.rag_top_k)
 
