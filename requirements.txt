@@ -1,0 +1,15 @@
+# Phase 1: classic pyautogen/AG2 GroupChat path
+pyautogen>=0.8.1
+openai>=1.40.0
+
+# Phase 2: RAG
+chromadb>=0.5.0
+sentence-transformers>=3.0.0
+langchain>=0.2.0
+llama-index>=0.10.0
+
+# Data/PDF parsing
+pandas>=2.0.0
+openpyxl>=3.1.0
+pypdf>=4.0.0
+python-dotenv>=1.0.0

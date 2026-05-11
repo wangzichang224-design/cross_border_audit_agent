@@ -1,0 +1,20 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+.venv/
+venv/
+
+# Generated outputs — too large / ephemeral for version control
+output/audit_reports/
+output/workpapers/
+output/synthetic_data/
+output/runtime_logs/
+
+# Vector index (rebuild with: python -m audit_multi_agent_rag.cli index)
+data/chroma_audit_rules/
+
+# Large binary knowledge sources
+knowledge_sources/**/*.pdf
+knowledge_sources/**/*.docx
+knowledge_sources/**/*.xlsx

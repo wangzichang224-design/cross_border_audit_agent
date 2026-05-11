@@ -1,0 +1,7 @@
+# Minimal dependencies for Phase 1 AutoGen API mode.
+# Mock mode can run with the Python standard library only.
+pyautogen>=0.8.1
+openai>=1.40.0
+python-dotenv>=1.0.0
+pandas>=2.0.0
+openpyxl>=3.1.0
