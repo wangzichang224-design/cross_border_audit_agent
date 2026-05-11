@@ -1,0 +1,5 @@
+account_name,bank_name,bank_account,currency,period_end_balance_local,period_end_balance_fx,fx_rate,is_restricted,restriction_note,prior_year_balance
+库存现金,,,CNY,32500.00,32500.00,1.00,False,,28600.00
+银行存款,招商银行,6225880200000001,CNY,5432109.00,5432109.00,1.00,False,,4980000.00
+银行存款,中信银行,8009998877665544,CNY,2113456.00,2113456.00,1.00,False,,1850000.00
+其他货币资金,招商银行,6225880200000002,CNY,800000.00,800000.00,1.00,True,银行承兑保证金,650000.00

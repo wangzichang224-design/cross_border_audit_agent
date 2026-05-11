@@ -4,6 +4,24 @@
 
 ---
 
+## 前端展示与项目结构
+
+这个仓库现在提供一个项目展示型 Streamlit 前端，适合作为 GitHub 主页演示和面试讲解入口：
+
+```bash
+streamlit run streamlit_app.py
+```
+
+前端包含项目概览、C 货币资金底稿生成、Agent 流水线、Benchmark 隔离设计、仓库结构和运行指南。完整结构说明见 [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md)。
+
+货币资金底稿可直接通过前端或 CLI 生成：
+
+```bash
+python cli.py workpaper --case-type cash --mode mock --materials-dir benchmarks/materials/case_001_minimal --template-root outputs/clean_templates --template-keyword 核心优化版
+```
+
+---
+
 ## 系统架构与运转流程
 
 ```mermaid

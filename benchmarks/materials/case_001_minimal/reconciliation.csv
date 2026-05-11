@@ -1,0 +1,3 @@
+category,description,amount,index
+book_plus,客户H 期后入账(已收未达),500000.00,GL V20260103-001
+bank_minus,银行手续费 GL 未入账,2891.00,Bank stmt T20251231001

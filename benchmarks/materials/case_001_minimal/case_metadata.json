@@ -1,0 +1,11 @@
+{
+  "case_id": "case_001_minimal",
+  "client_name": "星辰跨境科技(深圳)有限公司",
+  "period_end": "2025-12-31",
+  "analysis_date": "2026-01-15",
+  "te": 5000000.0,
+  "sad": 250000.0,
+  "gaap": "企业会计准则",
+  "currency": "CNY",
+  "variation_pct": 0.1
+}

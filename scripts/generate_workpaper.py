@@ -10,11 +10,11 @@ from pathlib import Path
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 
-from audit_multi_agent_rag.audit_rag.agents import AgentTurn
-from audit_multi_agent_rag.audit_rag.config import get_settings
-from audit_multi_agent_rag.audit_rag.data_tools import Finding, Voucher
-from audit_multi_agent_rag.audit_rag.pipeline import DEFAULT_CASE, run_audit_pipeline
-from audit_multi_agent_rag.audit_rag.rag import RetrievedChunk, format_chunk_citation, format_rag_context
+from audit_rag.agents import AgentTurn
+from audit_rag.config import get_settings
+from audit_rag.data_tools import Finding, Voucher
+from audit_rag.pipeline import DEFAULT_CASE, run_audit_pipeline
+from audit_rag.rag import RetrievedChunk, format_chunk_citation, format_rag_context
 
 
 DEFAULT_TEMPLATE_KEYWORD = "K1 SWP 固定资产"
@@ -22,18 +22,58 @@ AI_SHEET_NAME = "AI_Audit_Assistant"
 DEFAULT_GAAP = "企业会计准则"
 DEFAULT_CURRENCY = "人民币"
 
+# Per-case-type defaults. The cash workflow defaults to the neutral optimized
+# five-sheet template and reads client/period/currency from case_metadata.json
+# inside the materials dir, so it intentionally ignores --client-name / --gaap
+# / --currency.
+CASE_TYPE_DEFAULTS = {
+    "fixed_asset": {
+        "template_keyword": "K1 SWP 固定资产",
+    },
+    "cash": {
+        "template_keyword": "核心优化版",
+    },
+}
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate an Excel workpaper copy from a standard SWP template.")
+    parser.add_argument(
+        "--case-type",
+        choices=sorted(CASE_TYPE_DEFAULTS.keys()),
+        default="fixed_asset",
+        help="Which workpaper to fill. 'fixed_asset' uses the agent pipeline (legacy);"
+        " 'cash' uses the benchmark materials directory (new in Phase 1).",
+    )
+    parser.add_argument(
+        "--materials-dir",
+        default="",
+        help="For --case-type=cash: path to a benchmarks/materials/case_xxx/ folder."
+        " Ignored for fixed_asset.",
+    )
     parser.add_argument("--mode", choices=["mock", "autogen"], default="mock", help="mock is free; autogen calls API.")
-    parser.add_argument("--case", default=DEFAULT_CASE, help="Audit task description.")
-    parser.add_argument("--voucher-file", default="", help="Optional voucher CSV path.")
+    parser.add_argument("--case", default=DEFAULT_CASE, help="Audit task description (fixed_asset only).")
+    parser.add_argument("--voucher-file", default="", help="Optional voucher CSV path (fixed_asset only).")
     parser.add_argument("--template-root", required=True, help="Folder that contains standard SWP templates.")
-    parser.add_argument("--template-keyword", default=DEFAULT_TEMPLATE_KEYWORD, help="Template filename keyword.")
-    parser.add_argument("--client-name", default="XYZ公司", help="Client name used in output filename.")
-    parser.add_argument("--gaap", default=DEFAULT_GAAP, help="GAAP label for the lead sheet.")
-    parser.add_argument("--currency", default=DEFAULT_CURRENCY, help="Currency label for the lead sheet.")
-    return parser.parse_args()
+    parser.add_argument(
+        "--template-keyword",
+        default="",
+        help="Override the template filename keyword. Defaults to the keyword for the selected --case-type.",
+    )
+    parser.add_argument("--client-name", default="XYZ公司", help="Client name used in output filename (fixed_asset only).")
+    parser.add_argument("--gaap", default=DEFAULT_GAAP, help="GAAP label (fixed_asset only).")
+    parser.add_argument("--currency", default=DEFAULT_CURRENCY, help="Currency label (fixed_asset only).")
+    args = parser.parse_args()
+
+    # Fill in the per-case-type default keyword if user didn't override.
+    if not args.template_keyword:
+        args.template_keyword = CASE_TYPE_DEFAULTS[args.case_type]["template_keyword"]
+
+    # Validate cash-specific args
+    if args.case_type == "cash" and not args.materials_dir:
+        parser.error("--case-type=cash requires --materials-dir")
+
+    return args
 
 
 def find_template(template_root: Path, keyword: str) -> Path:
@@ -342,8 +382,18 @@ def write_section(ws, row: int, title: str) -> int:
 
 def main() -> None:
     args = parse_args()
+    if args.case_type == "cash":
+        _run_cash_workflow(args)
+    else:
+        _run_fixed_asset_workflow(args)
+
+
+def _run_fixed_asset_workflow(args: argparse.Namespace) -> None:
+    """Legacy workflow: runs the audit pipeline then writes the K1 固定资产 template."""
     template_path = find_template(Path(args.template_root), args.template_keyword)
-    vouchers, findings, rag_chunks, turns, report_path = build_agent_outputs(args.mode, args.case, args.voucher_file)
+    vouchers, findings, rag_chunks, turns, report_path = build_agent_outputs(
+        args.mode, args.case, args.voucher_file
+    )
     workbook_path = copy_template(template_path, args.client_name, args.mode)
     write_ai_sheet(
         workbook_path,
@@ -364,6 +414,57 @@ def main() -> None:
     print(f"Template: {template_path}")
     print(f"Markdown report: {report_path}")
     print(f"Excel workpaper: {workbook_path}")
+
+
+def _run_cash_workflow(args: argparse.Namespace) -> None:
+    """Phase 1 cash workflow.
+
+    Reads client materials from ``args.materials_dir``, runs the rule-based
+    cash workpaper filler from ``benchmarks.agent.cash_workpaper_filler``,
+    and writes the result alongside other workpapers in ``output/workpapers/``.
+
+    The audit pipeline (DeepSeek / mock agents) is intentionally NOT invoked:
+    the cash workflow's source of truth is the materials directory plus the
+    cell map, not LLM output. Phase 3 layers LLM reasoning on top.
+    """
+    # Lazy import so fixed_asset users aren't forced to load openpyxl-heavy
+    # benchmark modules.
+    from benchmarks.agent.cash_workpaper_filler import fill_cash_workpaper
+    from benchmarks.agent.materials_loader import load_case_materials
+
+    materials_dir = Path(args.materials_dir)
+    if not materials_dir.is_dir():
+        raise NotADirectoryError(f"--materials-dir does not exist: {materials_dir}")
+
+    # Sanity-load metadata so we fail fast on schema errors (and to get a
+    # nicer client_name for the output filename).
+    materials = load_case_materials(materials_dir)
+    client_name = materials.meta.client_name
+
+    template_path = find_template(Path(args.template_root), args.template_keyword)
+    output_path = _build_cash_output_path(template_path, client_name, materials.meta.case_id)
+
+    llm_enhance = args.mode == "autogen"
+    fill_cash_workpaper(materials_dir, template_path, output_path, llm_enhance=llm_enhance)
+
+    print("Cash workpaper generated.")
+    print(f"Case ID: {materials.meta.case_id}")
+    print(f"Client: {client_name}")
+    print(f"Template: {template_path}")
+    print(f"Materials: {materials_dir}")
+    print(f"LLM: {'enabled' if llm_enhance else 'disabled'}")
+    print(f"Excel workpaper: {output_path}")
+
+
+def _build_cash_output_path(template_path: Path, client_name: str, case_id: str) -> Path:
+    settings = get_settings()
+    workpapers_dir = settings.project_root / "output" / "workpapers"
+    workpapers_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
+    safe_client = client_name.replace("/", "_").replace("\\", "_").strip() or "Client"
+    safe_case = case_id.replace("/", "_").replace("\\", "_").strip() or "case"
+    suffix = template_path.suffix
+    return workpapers_dir / f"{stamp}_{template_path.stem}_{safe_client}_{safe_case}_AI底稿{suffix}"
 
 
 if __name__ == "__main__":

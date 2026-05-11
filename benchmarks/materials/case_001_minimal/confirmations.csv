@@ -1,0 +1,4 @@
+bank_name,bank_account,currency,confirmed_balance,restricted_amount,restriction_nature,confirmation_date,confirmation_index
+招商银行,6225880200000001,CNY,5432109.00,0.00,,2026-01-08,C.01 第1行
+中信银行,8009998877665544,CNY,2113456.00,200000.00,质押冻结(银承保证金),2026-01-10,C.01 第2行
+招商银行,6225880200000002,CNY,800000.00,800000.00,银行承兑保证金,2026-01-08,C.01 第3行
