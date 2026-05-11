@@ -5,9 +5,25 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from .agents import AgentTurn, run_autogen_groupchat, run_mock_groupchat, run_mock_cross_border_groupchat
+from .agents import (
+    AgentTurn,
+    run_autogen_groupchat,
+    run_mock_groupchat,
+    run_mock_cross_border_groupchat,
+)
 from .config import Settings, get_settings
-from .data_tools import Finding, Voucher, analyze_vouchers, analyze_cross_border_vouchers, load_vouchers
+from .critic import ReviewVerdict
+from .data_tools import (
+    Finding,
+    Voucher,
+    analyze_vouchers,
+    analyze_cross_border_vouchers,
+    load_vouchers,
+)
+from .orchestrator import (
+    ReviewLoopResult,
+    run_mock_review_loop,
+)
 from .rag import AuditKnowledgeBase, RetrievedChunk
 from .reporting import write_audit_report
 
@@ -46,6 +62,12 @@ class AuditPipelineResult:
     rag_chunks: list[RetrievedChunk]
     turns: list[AgentTurn]
     report_path: Path
+
+    # Review-loop artifacts (None when enable_review_loop is False).
+    review_verdicts: list[ReviewVerdict] | None = None
+    review_status: str | None = None  # 'approved' | 'escalated' | 'max_retries_exhausted'
+    review_iterations: int = 0
+    revised_agents: list[str] | None = None
 
 
 def run_audit_pipeline(
@@ -87,6 +109,51 @@ def run_audit_pipeline(
     else:
         raise ValueError(f"Unsupported mode: {mode!r}")
 
+    # ── Maker-Checker 复核回路 ─────────────────────────────────────────────
+    review_verdicts = None
+    review_status = None
+    review_iterations = 0
+    revised_agents = None
+    if settings.enable_review_loop:
+        if mode == "mock":
+            loop_result = run_mock_review_loop(
+                initial_turns=turns,
+                case_type=case_type,
+                max_retries=settings.review_max_retries,
+            )
+        else:
+            # LLM 模式: 用 make_llm_reviewer / make_llm_rerun_maker 构造回调
+            from openai import OpenAI
+            from .agents import _select_prompts
+            from .data_tools import format_findings
+            from .orchestrator import make_llm_reviewer, make_llm_rerun_maker
+            from .rag import format_rag_context
+
+            client = OpenAI(api_key=settings.deepseek_api_key, base_url=settings.deepseek_base_url)
+            data_p, comp_p, partner_p = _select_prompts(case_type)
+            loop_result = run_review_loop(
+                initial_turns=turns,
+                reviewer=make_llm_reviewer(
+                    client, settings, effective_description, case_type, settings.review_max_retries
+                ),
+                rerun_maker=make_llm_rerun_maker(
+                    client, settings, effective_description, case_type,
+                    agent_prompts={
+                        "Data_Extractor": data_p,
+                        "Compliance_Checker": comp_p,
+                        "Audit_Partner": partner_p,
+                    },
+                    rag_context=format_rag_context(rag_chunks),
+                    findings_text=format_findings(findings),
+                ),
+                max_retries=settings.review_max_retries,
+            )
+        turns = loop_result.turns
+        review_verdicts = loop_result.verdicts
+        review_status = loop_result.final_status
+        review_iterations = loop_result.iteration_count
+        revised_agents = loop_result.revised_agents
+
     report_path = write_audit_report(
         reports_dir=settings.reports_dir,
         case_type=case_type,
@@ -96,6 +163,9 @@ def run_audit_pipeline(
         rag_chunks=rag_chunks,
         turns=turns,
         mode=mode,
+        review_verdicts=review_verdicts,
+        review_status=review_status,
+        review_iterations=review_iterations,
     )
 
     return AuditPipelineResult(
@@ -109,6 +179,10 @@ def run_audit_pipeline(
         rag_chunks=rag_chunks,
         turns=turns,
         report_path=report_path,
+        review_verdicts=review_verdicts,
+        review_status=review_status,
+        review_iterations=review_iterations,
+        revised_agents=revised_agents,
     )
 
 

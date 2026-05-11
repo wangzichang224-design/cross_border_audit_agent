@@ -49,6 +49,9 @@ class Settings:
     rag_enable_hybrid: bool
     rag_enable_rerank: bool
     rag_reranker_model: str
+    # Orchestration upgrades (Phase: Maker-Checker review loop)
+    enable_review_loop: bool
+    review_max_retries: int
 
 
 def get_settings() -> Settings:
@@ -78,6 +81,8 @@ def get_settings() -> Settings:
         rag_enable_hybrid=_env_bool("RAG_ENABLE_HYBRID", default=True),
         rag_enable_rerank=_env_bool("RAG_ENABLE_RERANK", default=False),
         rag_reranker_model=os.getenv("RAG_RERANKER_MODEL", "BAAI/bge-reranker-base"),
+        enable_review_loop=_env_bool("AUDIT_ENABLE_REVIEW_LOOP", default=True),
+        review_max_retries=int(os.getenv("AUDIT_REVIEW_MAX_RETRIES", "2")),
     )
 
 

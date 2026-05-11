@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .agents import AgentTurn
+from .critic import ReviewVerdict
 from .data_tools import Finding, Voucher, format_findings
 from .rag import RetrievedChunk, format_rag_context
 
@@ -47,6 +48,9 @@ def write_audit_report(
     turns: list[AgentTurn],
     mode: str,
     case_type: str = "fixed_asset",
+    review_verdicts: list[ReviewVerdict] | None = None,
+    review_status: str | None = None,
+    review_iterations: int = 0,
 ) -> Path:
     reports_dir.mkdir(parents=True, exist_ok=True)
     now = datetime.now()
@@ -58,6 +62,18 @@ def write_audit_report(
     high_count = sum(1 for f in findings if f.risk_level == "高")
     mid_count = sum(1 for f in findings if f.risk_level == "中")
 
+    info_rows = [
+        f"| 生成时间 | {now.strftime('%Y-%m-%d %H:%M:%S')} |",
+        f"| 运行模式 | {mode} |",
+        f"| 审计场景 | {case_label} |",
+        f"| 样本凭证数 | {len(vouchers)} 条 |",
+        f"| 识别发现数 | 高风险 {high_count} 项 / 中风险 {mid_count} 项 |",
+    ]
+    if review_status is not None:
+        info_rows.append(
+            f"| 复核状态 | {review_status} (经过 {review_iterations} 轮) |"
+        )
+
     lines = [
         f"# 多Agent审计小组工作底稿 — {case_label}",
         "",
@@ -67,11 +83,7 @@ def write_audit_report(
         "",
         f"| 项目 | 内容 |",
         f"| --- | --- |",
-        f"| 生成时间 | {now.strftime('%Y-%m-%d %H:%M:%S')} |",
-        f"| 运行模式 | {mode} |",
-        f"| 审计场景 | {case_label} |",
-        f"| 样本凭证数 | {len(vouchers)} 条 |",
-        f"| 识别发现数 | 高风险 {high_count} 项 / 中风险 {mid_count} 项 |",
+        *info_rows,
         "",
         "---",
         "",
@@ -108,8 +120,19 @@ def write_audit_report(
             "Data_Extractor": "数据提取助理 (Data_Extractor)",
             "Compliance_Checker": "合规检查专家 (Compliance_Checker)",
             "Audit_Partner": "签字合伙人 (Audit_Partner)",
+            "Reviewer": "质量复核合伙人 (Reviewer)",
         }.get(turn.speaker, turn.speaker)
         lines += [f"### {speaker_label}", "", turn.content, ""]
+
+    if review_verdicts:
+        lines += [
+            "---",
+            "",
+            "## 质量复核轨迹",
+            "",
+        ]
+        for v in review_verdicts:
+            lines += [v.to_markdown(), ""]
 
     lines += [
         "---",

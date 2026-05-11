@@ -1,5 +1,26 @@
 # 开发留痕
 
+## 2026-05-11 (续)
+
+### 多Agent编排升级: Maker-Checker 复核回路
+
+**痛点定位**
+- 原 round-robin 是 A→B→C 线性输出，没有质量门控。
+- 真实大所审计的 Maker-Checker 机制需要独立 Reviewer 审查、退回重做。
+
+**改动**
+- 新增 `audit_rag/critic.py`: Reviewer prompt + JSON schema + 防御式 parser + 离线 mock reviewer (做真实质量门控: 是否引用 [依据 X]、是否分三段结论、跨境是否标币种).
+- 新增 `audit_rag/orchestrator.py`: 状态机式 review loop, 支持有界重试、按 agent 名定向重跑、超阈值 escalate_to_human, 通过依赖注入支持 mock / LLM 两种模式.
+- `pipeline.py` / `config.py`: 新增 `enable_review_loop` (默认 on) 和 `review_max_retries` (默认 2) 配置.
+- `reporting.py`: 工作底稿新增"质量复核轨迹"小节, 显示每轮 Reviewer 裁定.
+
+**测试**
+- `tests/test_critic.py`: JSON 解析鲁棒性、mock reviewer 业务规则、loop 收敛/逃逸/升级三种终态.
+
+**面试讲点**
+- 把行业的 Maker-Checker 流程编码为 Agent 工作流, 而不是更长的 prompt.
+- 三个安全机制: 结构化 JSON 输出 → 机械路由; 有界重试 → 防止 token 烧穿; 解析失败默认 not-approved → 永远不会让 bug 自动签字.
+
 ## 2026-05-11
 
 ### RAG 升级: Hybrid Search + Cross-Encoder Rerank
