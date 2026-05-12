@@ -31,14 +31,14 @@ cross_border_audit_agent/
 ├─ sample_knowledge/           CPA / 跨境审计知识片段
 ├─ tests/                      自动化测试
 ├─ cli.py                      统一命令行入口
-└─ streamlit_app.py            GitHub 展示与底稿生成前端
+└─ streamlit_app.py            上传材料并生成底稿的极简前端
 ```
 
 ## 分层说明
 
 | 层级 | 路径 | 作用 |
 |---|---|---|
-| 前端展示层 | `streamlit_app.py` | 项目概览、结构说明、底稿生成入口、运行命令 |
+| 前端入口层 | `streamlit_app.py` | 上传试算平衡表、序时账、询证函回函并生成可下载底稿 |
 | CLI 入口层 | `cli.py` | 统一暴露 `run`、`workpaper`、`search`、`doctor`、`paysim` |
 | Agent 核心层 | `audit_rag/` | 多 Agent 审计流水线、RAG、复核回路、报告生成 |
 | Benchmark 层 | `benchmarks/` | 货币资金材料、答案、Agent 输出隔离，后续支持量化评分 |
@@ -95,16 +95,13 @@ flowchart LR
 streamlit run streamlit_app.py
 ```
 
-前端包含六个页签：
+前端现在只保留一条用户路径：
 
-| 页签 | 内容 |
+| 步骤 | 内容 |
 |---|---|
-| 项目概览 | 项目定位、能力边界、当前完成状态 |
-| 底稿生成 | 选择材料目录和模板目录，一键生成 C 货币资金底稿 |
-| Agent 流水线 | 从客户材料到报告/底稿的五阶段流程 |
-| Benchmark | materials / agent / ground_truth 隔离设计 |
-| 项目结构 | 仓库树和核心文件职责 |
-| 运行指南 | 本地启动、CLI 示例、API 使用提醒 |
+| 上传关键文件 | 试算平衡表、序时账、询证函回函，支持 CSV / XLSX |
+| 填写案件参数 | 客户名称、期末日、TE、SAD、记账本位币 |
+| 生成并下载 | 自动整理材料包，写入核心优化版 C 货币资金底稿，提供 Excel 下载按钮 |
 
 ## 常用命令
 

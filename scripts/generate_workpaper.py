@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -461,10 +462,15 @@ def _build_cash_output_path(template_path: Path, client_name: str, case_id: str)
     workpapers_dir = settings.project_root / "output" / "workpapers"
     workpapers_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
-    safe_client = client_name.replace("/", "_").replace("\\", "_").strip() or "Client"
-    safe_case = case_id.replace("/", "_").replace("\\", "_").strip() or "case"
+    safe_client = _safe_filename_part(client_name, "Client")
+    safe_case = _safe_filename_part(case_id, "case")
     suffix = template_path.suffix
     return workpapers_dir / f"{stamp}_{template_path.stem}_{safe_client}_{safe_case}_AI底稿{suffix}"
+
+
+def _safe_filename_part(value: str, fallback: str) -> str:
+    cleaned = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", str(value)).strip(" ._")
+    return cleaned or fallback
 
 
 if __name__ == "__main__":

@@ -4,15 +4,15 @@
 
 ---
 
-## 前端展示与项目结构
+## 前端与项目结构
 
-这个仓库现在提供一个项目展示型 Streamlit 前端，适合作为 GitHub 主页演示和面试讲解入口：
+这个仓库提供一个极简 Streamlit 前端：上传试算平衡表、序时账、询证函回函后，一键生成 C 货币资金审计底稿并下载 Excel。
 
 ```bash
 streamlit run streamlit_app.py
 ```
 
-前端包含项目概览、C 货币资金底稿生成、Agent 流水线、Benchmark 隔离设计、仓库结构和运行指南。完整结构说明见 [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md)。
+完整项目结构说明见 [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md)。
 
 货币资金底稿可直接通过前端或 CLI 生成：
 

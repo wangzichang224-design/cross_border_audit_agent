@@ -8,10 +8,12 @@ venv/
 .vscode/
 .tmp/
 .test_tmp/
+.streamlit-preview.*.log
 
 # Generated outputs — too large / ephemeral for version control
 output/audit_reports/
 output/workpapers/
+output/uploaded_materials/
 output/synthetic_data/
 output/runtime_logs/
 reports/
