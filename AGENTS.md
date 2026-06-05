@@ -1,36 +1,42 @@
-# audit_multi_agent_rag Agent Guide
+# Cross-Border Audit Agent Guide
 
-This is a separate Python prototype for an audit-oriented multi-agent + RAG workflow. Do not mix its logic with the root `novel_game` app.
-
-## Operating Mode
-
-- Default development mode is `mock`.
-- `autogen` mode depends on external packages and environment configuration.
-- Favor keeping `mock` mode healthy so the prototype remains runnable without paid APIs.
+This repository is a Python prototype for a trusted audit-oriented multi-agent workflow. Keep the mock path healthy so the project remains runnable in a classroom or interview without paid APIs.
 
 ## Entry Points
 
-- CLI center: `python -m audit_multi_agent_rag.cli ...`
-- Quick run: `python -m audit_multi_agent_rag.cli run --mode mock`
-- Workpaper generation: `python -m audit_multi_agent_rag.cli workpaper --mode mock`
-- Environment diagnostics: `python -m audit_multi_agent_rag.cli doctor`
+- Streamlit demo: `streamlit run streamlit_app.py`
+- LAN demo: `streamlit run streamlit_app.py --server.address 0.0.0.0 --server.port 8501`
+- CLI center: `python cli.py ...`
+- Quick audit report: `python cli.py run --case-type cross_border --mode mock`
+- Cash workpaper generation: `python cli.py workpaper --case-type cash --mode mock --materials-dir benchmarks/materials/case_001_minimal --template-root outputs/clean_templates --template-keyword 核心优化版`
+- Environment diagnostics: `python cli.py doctor`
 
 ## Module Map
 
-- `audit_rag/agents.py`: agent setup and conversation orchestration
-- `audit_rag/pipeline.py`: pipeline execution and result assembly
-- `audit_rag/rag.py`: retrieval layer with fallback behavior
-- `audit_rag/data_tools.py`: voucher parsing and anomaly detection
-- `audit_rag/reporting.py`: Markdown output generation
-- `audit_rag/config.py`: settings and path resolution
+- `streamlit_app.py`: classroom UI, built-in demo path, and upload-to-workpaper workflow
+- `cli.py`: command center for diagnostics, search, audit runs, and workpaper generation
+- `audit_rag/agents.py`: Data Extractor, Compliance Checker, and Audit Partner roles
+- `audit_rag/orchestrator.py`: Maker-Checker bounded review loop
+- `audit_rag/hybrid_retriever.py`: BM25 + vector + RRF retrieval
+- `audit_rag/reranker.py`: optional cross-encoder reranking
+- `benchmarks/agent/cash_workpaper_filler.py`: formula-safe C cash workpaper filling engine
+- `benchmarks/agent/pdf_confirmations.py`: bank confirmation PDF parser
+- `assets/brand/`: original SVG/PNG project logo assets
 
 ## Boundaries
 
-- `output/` contains generated reports and workpapers; do not hand-edit them unless asked.
-- `sample_data/` and `sample_knowledge/` are fixtures and seed knowledge, not production truth.
-- Template discovery logic in `cli.py` may inspect the user's Desktop; be careful when changing filesystem behavior.
+- `output/` contains generated reports, uploads, and workpapers; do not commit them.
+- `benchmarks/ground_truth/` is hidden-answer material and should not be exposed to Agent runtime code.
+- `outputs/clean_templates/` contains the clean workpaper template used by the demo.
+- `mock` mode is the default demo path; `autogen` mode can call an external OpenAI-compatible API.
 
 ## Validation
 
-- Prefer CLI-level checks after meaningful changes so the full prototype flow still works.
-- Keep docs in `START_HERE.md`, `README.md`, and the development plans aligned if you change core usage.
+Run these checks after meaningful changes:
+
+```powershell
+python -m pytest -q
+python cli.py doctor
+python cli.py where
+python cli.py workpaper --case-type cash --mode mock --materials-dir benchmarks/materials/case_001_minimal --template-root outputs/clean_templates --template-keyword 核心优化版
+```

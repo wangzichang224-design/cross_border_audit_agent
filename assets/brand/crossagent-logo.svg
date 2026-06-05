@@ -1,0 +1,28 @@
+<svg width="1280" height="360" viewBox="0 0 1280 360" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cross-Border Audit Agent logo">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1280" y2="360" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#08111F"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="67" y1="55" x2="293" y2="305" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#38BDF8"/>
+      <stop offset="0.52" stop-color="#22C55E"/>
+      <stop offset="1" stop-color="#A78BFA"/>
+    </linearGradient>
+    <linearGradient id="core" x1="121" y1="104" x2="239" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E0F2FE"/>
+      <stop offset="1" stop-color="#ECFDF5"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="360" rx="56" fill="url(#bg)"/>
+  <path d="M67 179C67 116.039 118.039 65 181 65C243.961 65 295 116.039 295 179C295 241.961 243.961 293 181 293" stroke="url(#ring)" stroke-width="14" stroke-linecap="round"/>
+  <path d="M83 220C106 271 158 306 217 290C252 280 279 254 292 221" stroke="#38BDF8" stroke-width="8" stroke-linecap="round" stroke-dasharray="17 17" opacity="0.72"/>
+  <path d="M182 105L248 143V218L182 257L116 218V143L182 105Z" fill="url(#core)" stroke="#93C5FD" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M151 183L175 207L217 157" stroke="#0F766E" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="182" cy="105" r="22" fill="#38BDF8" stroke="#E0F2FE" stroke-width="6"/>
+  <circle cx="116" cy="218" r="22" fill="#22C55E" stroke="#ECFDF5" stroke-width="6"/>
+  <circle cx="248" cy="218" r="22" fill="#A78BFA" stroke="#F3E8FF" stroke-width="6"/>
+  <text x="360" y="146" fill="#F8FAFC" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="54" font-weight="760" letter-spacing="0">Cross-Border Audit Agent</text>
+  <text x="363" y="206" fill="#93C5FD" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="23" font-weight="620" letter-spacing="1.8">TRUSTED MULTI-AGENT AUDIT WORKFLOW</text>
+  <text x="363" y="253" fill="#CBD5E1" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="420">Structured evidence · RAG provenance · Maker-Checker review · Excel workpapers</text>
+</svg>

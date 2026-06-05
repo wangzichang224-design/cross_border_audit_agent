@@ -1,0 +1,29 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cross-Border Audit Agent mark">
+  <defs>
+    <linearGradient id="ring" x1="86" y1="78" x2="426" y2="434" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#38BDF8"/>
+      <stop offset="0.52" stop-color="#22C55E"/>
+      <stop offset="1" stop-color="#A78BFA"/>
+    </linearGradient>
+    <linearGradient id="core" x1="168" y1="147" x2="344" y2="365" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E0F2FE"/>
+      <stop offset="1" stop-color="#ECFDF5"/>
+    </linearGradient>
+    <filter id="softShadow" x="40" y="40" width="432" height="432" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#0F172A" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#08111F"/>
+  <path d="M99 253C99 166.844 168.844 97 255 97C341.156 97 411 166.844 411 253C411 339.156 341.156 409 255 409" stroke="url(#ring)" stroke-width="18" stroke-linecap="round"/>
+  <path d="M122 309C153 379 225 427 305 404C353 390 390 354 407 310" stroke="#38BDF8" stroke-width="10" stroke-linecap="round" stroke-dasharray="22 22" opacity="0.72"/>
+  <g filter="url(#softShadow)">
+    <path d="M257 152L348 205V309L257 362L166 309V205L257 152Z" fill="url(#core)" stroke="#93C5FD" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M214 260L246 292L306 222" stroke="#0F766E" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="257" cy="152" r="30" fill="#38BDF8" stroke="#E0F2FE" stroke-width="8"/>
+    <circle cx="166" cy="309" r="30" fill="#22C55E" stroke="#ECFDF5" stroke-width="8"/>
+    <circle cx="348" cy="309" r="30" fill="#A78BFA" stroke="#F3E8FF" stroke-width="8"/>
+    <path d="M257 183V230" stroke="#1E293B" stroke-width="8" stroke-linecap="round" opacity="0.35"/>
+    <path d="M194 292L231 272" stroke="#1E293B" stroke-width="8" stroke-linecap="round" opacity="0.35"/>
+    <path d="M320 292L283 272" stroke="#1E293B" stroke-width="8" stroke-linecap="round" opacity="0.35"/>
+  </g>
+</svg>

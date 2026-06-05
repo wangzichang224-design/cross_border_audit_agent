@@ -9,6 +9,10 @@ venv/
 .tmp/
 .test_tmp/
 .streamlit-preview.*.log
+make_comparison.py
+make_diagram.py
+deliverables/*.manifest.json
+deliverables/artifact-build-manifest.json
 
 # Generated outputs — too large / ephemeral for version control
 output/audit_reports/
@@ -21,6 +25,7 @@ data/raw/
 data/processed/
 data/paysim/
 outputs/spreadsheet_upgrade_work/
+outputs/*/presentations/
 outputs/clean_templates/*
 !outputs/clean_templates/
 !outputs/clean_templates/C_货币资金审计底稿_核心优化版_CN_CAS.xlsx
@@ -30,7 +35,7 @@ outputs/clean_templates/*已填写*.xlsx
 outputs/clean_templates/*agent已填写*.xlsx
 benchmarks/materials/cash/
 
-# Vector index (rebuild with: python -m audit_multi_agent_rag.cli index)
+# Vector index (rebuild with: python cli.py index)
 data/chroma_audit_rules/
 
 # Large binary knowledge sources

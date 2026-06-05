@@ -14,6 +14,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Iterable
 
+import base64
 import pandas as pd
 import streamlit as st
 
@@ -24,10 +25,13 @@ sys.path.insert(0, str(PROJECT_ROOT))
 DEFAULT_TEMPLATE_ROOT = PROJECT_ROOT / "outputs" / "clean_templates"
 DEFAULT_TEMPLATE_KEYWORD = "核心优化版"
 UPLOAD_MATERIALS_DIR = PROJECT_ROOT / "output" / "uploaded_materials"
+SAMPLE_MATERIALS_DIR = PROJECT_ROOT / "benchmarks" / "materials" / "case_001_minimal"
+BRAND_LOGO_PATH = PROJECT_ROOT / "assets" / "brand" / "crossagent-logo.png"
+BRAND_MARK_PATH = PROJECT_ROOT / "assets" / "brand" / "crossagent-mark.png"
 
 
 st.set_page_config(
-    page_title="货币资金底稿生成",
+    page_title="Cross-Border Audit Agent",
     page_icon=None,
     layout="centered",
     initial_sidebar_state="collapsed",
@@ -43,8 +47,10 @@ st.markdown(
         --line: #d9e2ec;
         --surface: #ffffff;
         --soft: #f6f8fb;
-        --accent: #0f766e;
-        --accent-dark: #115e59;
+        --accent: #2563eb;
+        --accent-dark: #0f766e;
+        --green: #16a34a;
+        --violet: #7c3aed;
         --warn: #a16207;
     }
     .stApp {
@@ -52,28 +58,86 @@ st.markdown(
         color: var(--ink);
     }
     .block-container {
-        max-width: 980px;
-        padding-top: 2rem;
+        max-width: 1080px;
+        padding-top: 1.25rem;
         padding-bottom: 3rem;
     }
     .hero {
-        background: var(--surface);
-        border: 1px solid var(--line);
+        background: #08111f;
+        border: 1px solid #1e3a5f;
         border-radius: 8px;
-        padding: 24px 28px;
+        padding: 26px 30px;
         margin-bottom: 18px;
+        color: #f8fafc;
+        overflow: hidden;
+    }
+    .hero-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 250px;
+        gap: 24px;
+        align-items: center;
+    }
+    .hero-logo {
+        max-width: 100%;
+        border-radius: 8px;
     }
     .hero h1 {
         margin: 0 0 8px 0;
-        font-size: 30px;
+        font-size: 36px;
         line-height: 1.2;
         letter-spacing: 0;
     }
     .hero p {
-        color: var(--muted);
+        color: #cbd5e1;
         font-size: 15px;
         line-height: 1.7;
         margin: 0;
+    }
+    .eyebrow {
+        color: #93c5fd;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+    }
+    .badge-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 18px;
+    }
+    .badge {
+        border: 1px solid rgba(147,197,253,.35);
+        background: rgba(15,23,42,.75);
+        color: #e0f2fe;
+        border-radius: 999px;
+        padding: 5px 11px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+    .evidence-strip {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin: 0 0 16px 0;
+    }
+    .evidence-item {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 13px 14px;
+    }
+    .evidence-item b {
+        display: block;
+        color: var(--ink);
+        font-size: 18px;
+        margin-bottom: 2px;
+    }
+    .evidence-item span {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
     }
     .panel {
         background: var(--surface);
@@ -81,6 +145,16 @@ st.markdown(
         border-radius: 8px;
         padding: 18px;
         margin-bottom: 14px;
+    }
+    .demo-panel {
+        border-color: #bfdbfe;
+        background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
+    }
+    .demo-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.5fr) minmax(240px, .9fr);
+        gap: 18px;
+        align-items: center;
     }
     .mini-title {
         font-size: 16px;
@@ -100,6 +174,30 @@ st.markdown(
         color: var(--warn);
         font-weight: 700;
     }
+    .flow {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 12px;
+    }
+    .flow-step {
+        border: 1px solid #dbeafe;
+        background: #ffffff;
+        border-radius: 8px;
+        padding: 10px;
+        min-height: 74px;
+    }
+    .flow-step b {
+        display: block;
+        color: #1d4ed8;
+        font-size: 12px;
+        margin-bottom: 4px;
+    }
+    .flow-step span {
+        color: #475569;
+        font-size: 12px;
+        line-height: 1.35;
+    }
     div[data-testid="stFileUploader"] {
         background: #fbfcfe;
         border: 1px solid #e5eaf0;
@@ -111,6 +209,17 @@ st.markdown(
         border: 1px solid var(--line);
         border-radius: 8px;
         padding: 10px 12px;
+    }
+    @media (max-width: 760px) {
+        .hero-grid,
+        .demo-grid,
+        .evidence-strip,
+        .flow {
+            grid-template-columns: 1fr;
+        }
+        .hero h1 {
+            font-size: 30px;
+        }
     }
 </style>
 """,
@@ -477,6 +586,37 @@ def _run_cash_workpaper(materials_dir: Path, use_llm: bool) -> Path:
     return output_path
 
 
+def _image_data_uri(path: Path) -> str:
+    if not path.exists():
+        return ""
+    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
+
+
+def _material_counts(materials_dir: Path) -> dict[str, int]:
+    files = {
+        "试算平衡表": materials_dir / "period_summary.csv",
+        "序时账": materials_dir / "gl_bank.csv",
+        "询证函回函": materials_dir / "confirmations.csv",
+    }
+    counts: dict[str, int] = {}
+    for label, path in files.items():
+        if not path.exists():
+            counts[label] = 0
+            continue
+        try:
+            counts[label] = len(pd.read_csv(path))
+        except Exception:
+            counts[label] = 0
+    return counts
+
+
+def _record_result(output_path: Path, materials_dir: Path, counts: dict[str, int]) -> None:
+    st.session_state["last_output_path"] = str(output_path)
+    st.session_state["last_materials_dir"] = str(materials_dir)
+    st.session_state["last_counts"] = counts
+
+
 def _download_button(path: Path) -> None:
     st.download_button(
         "下载已生成的底稿",
@@ -488,15 +628,97 @@ def _download_button(path: Path) -> None:
     )
 
 
+def _render_result_panel() -> None:
+    output = Path(st.session_state["last_output_path"])
+    counts = st.session_state.get("last_counts", {})
+    st.markdown('<div class="panel"><div class="mini-title">生成结果</div>', unsafe_allow_html=True)
+    c1, c2, c3 = st.columns(3)
+    c1.metric("试算平衡表", f"{counts.get('试算平衡表', 0)} 行")
+    c2.metric("序时账", f"{counts.get('序时账', 0)} 行")
+    c3.metric("询证函回函", f"{counts.get('询证函回函', 0)} 行")
+    st.caption(f"输出文件：{output}")
+    _download_button(output)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+logo_uri = _image_data_uri(BRAND_LOGO_PATH)
+logo_html = f'<img class="hero-logo" src="{logo_uri}" alt="Cross-Border Audit Agent logo" />' if logo_uri else ""
+
 st.markdown(
-    """
+    f"""
 <div class="hero">
-    <h1>货币资金审计底稿自动生成</h1>
-    <p>上传试算平衡表、序时账、询证函回函，系统会整理为审计材料包，写入无品牌 C 货币资金底稿，并生成可下载的 Excel 文件。</p>
+  <div class="hero-grid">
+    <div>
+      <div class="eyebrow">Digital Finance · Trusted Agent Demo</div>
+      <h1>跨境电商资金流审计 Agent</h1>
+      <p>
+        面向数字金融课堂展示的可信 AI 审计原型：把客户材料结构化为审计证据，
+        结合规则扫描、RAG 依据、多 Agent 复核和 Excel 底稿写入，默认 mock 模式即可本地演示。
+      </p>
+      <div class="badge-row">
+        <span class="badge">No API needed for demo</span>
+        <span class="badge">RAG provenance</span>
+        <span class="badge">Maker-Checker review</span>
+        <span class="badge">Formula-safe Excel output</span>
+      </div>
+    </div>
+    <div>{logo_html}</div>
+  </div>
 </div>
 """,
     unsafe_allow_html=True,
 )
+
+st.markdown(
+    """
+<div class="evidence-strip">
+  <div class="evidence-item"><b>3 Agents</b><span>Data Extractor / Compliance Checker / Audit Partner</span></div>
+  <div class="evidence-item"><b>8 Risks</b><span>跨境电商资金流与合规高风险事项</span></div>
+  <div class="evidence-item"><b>52 Tests</b><span>核心检索、复核和底稿写入测试已覆盖</span></div>
+  <div class="evidence-item"><b>Mock First</b><span>课堂演示默认不外发客户数据</span></div>
+</div>
+""",
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    """
+<div class="panel demo-panel">
+  <div class="demo-grid">
+    <div>
+      <div class="mini-title">课堂快速演示</div>
+      <div class="hint">
+        直接使用仓库内置合成材料生成 C 货币资金审计底稿，适合作为 PPT 开场后的现场演示。
+        这一路径不调用远端模型，所有金额聚合、回函核对和 Excel 写入都在本机完成。
+      </div>
+      <div class="flow">
+        <div class="flow-step"><b>Material</b><span>试算平衡表、序时账、函证</span></div>
+        <div class="flow-step"><b>Rules</b><span>金额、银行账户、调节项核对</span></div>
+        <div class="flow-step"><b>Agent</b><span>可选 LLM 文本增强</span></div>
+        <div class="flow-step"><b>Excel</b><span>写入模板可填区域</span></div>
+        <div class="flow-step"><b>Review</b><span>保留公式区与 check 行</span></div>
+      </div>
+    </div>
+    <div>
+""",
+    unsafe_allow_html=True,
+)
+
+demo_clicked = st.button("使用内置示例生成底稿", type="primary", width="stretch")
+st.caption("推荐课堂演示使用：无需上传文件，无需 API Key。")
+st.markdown("</div></div></div>", unsafe_allow_html=True)
+
+if demo_clicked:
+    try:
+        with st.spinner("正在用内置示例材料生成底稿..."):
+            demo_output = _run_cash_workpaper(SAMPLE_MATERIALS_DIR, use_llm=False)
+            _record_result(demo_output, SAMPLE_MATERIALS_DIR, _material_counts(SAMPLE_MATERIALS_DIR))
+        st.success("示例底稿已生成，可以下载或打开输出目录查看。")
+    except Exception as exc:
+        st.error(f"示例生成失败：{exc}")
+
+if "last_output_path" in st.session_state:
+    _render_result_panel()
 
 
 with st.form("workpaper_form", clear_on_submit=False):
@@ -572,25 +794,12 @@ if submitted:
                 )
                 output_path = _run_cash_workpaper(materials_dir, use_llm=use_llm)
 
-            st.session_state["last_output_path"] = str(output_path)
-            st.session_state["last_materials_dir"] = str(materials_dir)
-            st.session_state["last_counts"] = counts
+            _record_result(output_path, materials_dir, counts)
             st.success("底稿已生成")
         except Exception as exc:
             st.error(f"生成失败：{exc}")
-
-
-if "last_output_path" in st.session_state:
-    output = Path(st.session_state["last_output_path"])
-    counts = st.session_state.get("last_counts", {})
-    st.markdown('<div class="panel"><div class="mini-title">3. 下载结果</div>', unsafe_allow_html=True)
-    c1, c2, c3 = st.columns(3)
-    c1.metric("试算平衡表", f"{counts.get('试算平衡表', 0)} 行")
-    c2.metric("序时账", f"{counts.get('序时账', 0)} 行")
-    c3.metric("询证函回函", f"{counts.get('询证函回函', 0)} 行")
-    st.caption(f"输出文件：{output}")
-    _download_button(output)
-    st.markdown("</div>", unsafe_allow_html=True)
+        if "last_output_path" in st.session_state:
+            _render_result_panel()
 
 
 with st.expander("支持的列名"):
