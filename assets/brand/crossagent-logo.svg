@@ -24,5 +24,5 @@
   <circle cx="248" cy="218" r="22" fill="#A78BFA" stroke="#F3E8FF" stroke-width="6"/>
   <text x="360" y="146" fill="#F8FAFC" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="54" font-weight="760" letter-spacing="0">Cross-Border Audit Agent</text>
   <text x="363" y="206" fill="#93C5FD" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="23" font-weight="620" letter-spacing="1.8">TRUSTED MULTI-AGENT AUDIT WORKFLOW</text>
-  <text x="363" y="253" fill="#CBD5E1" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="420">Structured evidence · RAG provenance · Maker-Checker review · Excel workpapers</text>
+  <text x="363" y="253" fill="#CBD5E1" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="420">Structured evidence · RAG provenance · Maker-Checker review · Risk reports</text>
 </svg>

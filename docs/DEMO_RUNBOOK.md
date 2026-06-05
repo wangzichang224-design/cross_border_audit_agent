@@ -1,82 +1,77 @@
-# 课堂局域网演示 Runbook
+# Classroom Demo Runbook
 
-## 1. 确认项目目录
+This runbook is for the cross-border e-commerce fund-flow audit demo.
+
+## 1. Start The App
 
 ```powershell
 cd D:\03_AI_Projects\cross_border_audit_agent\cross_border_audit_agent
+streamlit run streamlit_app.py --server.address 0.0.0.0 --server.port 8501
 ```
 
-## 2. 获取 WLAN IP
+Check the WLAN IP before class:
 
 ```powershell
 Get-NetIPAddress -AddressFamily IPv4 |
   Where-Object { $_.InterfaceAlias -eq "WLAN" -and $_.AddressState -eq "Preferred" } |
-  Select-Object -ExpandProperty IPAddress
+  Select-Object -First 1 -ExpandProperty IPAddress
 ```
 
-当前机器最近一次检测到的 WLAN IP 是：
-
-```text
-10.5.52.230
-```
-
-如果课堂网络变化，以当天命令输出为准。
-
-## 3. 启动前端
-
-```powershell
-streamlit run streamlit_app.py --server.address 0.0.0.0 --server.port 8501
-```
-
-本机打开：
-
-```text
-http://localhost:8501
-```
-
-同一局域网内打开：
+Open:
 
 ```text
 http://<WLAN-IP>:8501
 ```
 
-例如：
+## 2. Live Demo Flow
 
-```text
-http://10.5.52.230:8501
-```
+1. Open the front page: “跨境电商资金流 AI 审计系统”.
+2. Keep data source as “演示数据（自动生成）”.
+3. Keep simulated days at 90.
+4. If API key is configured, keep DeepSeek enabled; otherwise use the rule report path.
+5. Click “开始审计”.
+6. Show the pipeline stages:
+   - data ingestion
+   - cleaning and quality score
+   - ISA 240 / ISA 520 rule scan
+   - optional DeepSeek narrative
+   - settlement reconciliation
+   - report generation
+7. Show the result area:
+   - key financial metrics
+   - audit findings list
+   - AI audit narrative
+   - platform and cost charts
+   - download buttons
 
-## 4. 开场 Demo 流程
+## 3. Backup CLI Demo
 
-1. PPT 第 1 页展示局域网地址。
-2. 浏览器打开前端。
-3. 点击“使用内置示例生成底稿”。
-4. 等待生成成功后点击下载 Excel。
-5. 打开 Excel，重点展示：
-   - 客户信息和期末日已写入；
-   - 试算平衡表、银行账户、函证余额被结构化；
-   - 公式区、Check 行、Tie-out 逻辑保留；
-   - demo 默认 mock，不调用远端 API。
-
-## 5. 备用 CLI 演示
-
-如果网络或浏览器临时异常，用 CLI 跑同一条核心链路：
+If Streamlit is slow or the classroom network is unstable:
 
 ```powershell
-python cli.py workpaper --case-type cash --mode mock `
-  --materials-dir benchmarks/materials/case_001_minimal `
-  --template-root outputs/clean_templates `
-  --template-keyword 核心优化版
+python cli.py run --case-type cross_border --mode mock
 ```
 
-输出目录：
+Outputs:
 
 ```text
-output/workpapers/
+output/audit_reports/
 ```
 
-## 6. 风险提示
+## 4. Talking Points
 
-- 课堂演示使用合成材料，不展示真实客户资料。
-- 默认 mock 模式无需 API Key，也不会外发数据。
-- 如需 `autogen` 模式，请先脱敏材料并确认 `.env` 配置。
+- The demo data is synthetic and safe for class.
+- The system is not a free-form chatbot; it is a controlled workflow.
+- Rule checks catch deterministic issues first.
+- AI narrative is useful for explaining risk, but human review remains the final gate.
+- Real client data should be desensitized or processed in a private deployment.
+
+## 5. Before Presenting
+
+```powershell
+python -m pytest -q
+python cli.py doctor
+python cli.py where
+```
+
+Confirm the PPT cover IP matches the current WLAN IP.

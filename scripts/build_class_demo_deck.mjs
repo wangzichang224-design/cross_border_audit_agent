@@ -146,14 +146,14 @@ async function slide01(presentation, ctx) {
   const slide = presentation.slides.add();
   bg(slide, ctx, C.dark);
   await ctx.addImage(slide, { path: ASSETS.logo, x: 62, y: 54, w: 560, h: 160, fit: "contain", alt: "project logo" });
-  t(slide, ctx, "可信财务 AI：把 Agent 关进确定性流程", 70, 242, 860, 62, { size: 36, color: C.white, bold: true });
+  t(slide, ctx, "跨境电商资金流 AI 审计系统", 70, 242, 860, 62, { size: 38, color: C.white, bold: true });
   t(slide, ctx, "数字金融课堂展示 · 两人讲解 · 现场打开局域网前端演示", 74, 316, 780, 30, { size: 18, color: "#bfdbfe" });
   box(slide, ctx, 76, 392, 512, 92, { fill: "#0f1f33", stroke: "#1d4ed8" });
   t(slide, ctx, "演示地址", 100, 410, 120, 26, { size: 16, color: "#93c5fd", bold: true });
   t(slide, ctx, DEMO_URL, 100, 444, 440, 32, { size: 25, color: C.white, bold: true });
   pill(slide, ctx, "Speaker A：问题与系统", 720, 410, 220, "#38bdf8");
   pill(slide, ctx, "Speaker B：架构与范式", 960, 410, 220, "#a78bfa");
-  t(slide, ctx, "开场先演示收敛后的底稿生成，再回到一个更真实的问题：为什么最初那个多 Agent 虽然能跑，但还不能被审计人员信任。", 74, 548, 980, 44, { size: 17, color: "#cbd5e1" });
+  t(slide, ctx, "开场先演示资金流审计流水线：自动生成演示数据、执行规则扫描、调用 DeepSeek/离线分析，并输出风险发现和审计报告。", 74, 548, 980, 44, { size: 17, color: "#cbd5e1" });
   footer(slide, ctx, 1);
   return slide;
 }
@@ -161,11 +161,11 @@ async function slide01(presentation, ctx) {
 async function slide02(presentation, ctx) {
   const slide = presentation.slides.add();
   bg(slide, ctx);
-  title(slide, ctx, "LIVE DEMO", "先演示收敛后的底稿 Workflow，再讲为什么我不再相信自由 Agent。", "Speaker A");
+  title(slide, ctx, "LIVE DEMO", "先打开跨境电商资金流审计系统，让同学看到真实流水线。", "Speaker A");
   await ctx.addImage(slide, { path: ASSETS.resultShot, x: 58, y: 160, w: 760, h: 455, fit: "contain", alt: "Streamlit result screenshot" });
-  card(slide, ctx, "课堂动作", "1. 打开封面 IP 地址\n2. 点击“使用内置示例生成底稿”\n3. 下载 Excel 工作底稿\n4. 回到 PPT 解释为什么这样设计", 858, 166, 330, 160, C.blue);
-  card(slide, ctx, "这版演示是什么", "内置合成材料 + mock 模式 + Excel 底稿。重点展示可运行路径，不展示真实客户敏感数据。", 858, 354, 330, 120, C.green);
-  card(slide, ctx, "它不是什么", "不是让模型自由查账、自由下结论；而是把材料、规则、证据和复核点串起来。", 858, 502, 330, 100, C.violet);
+  card(slide, ctx, "课堂动作", "1. 打开封面 IP 地址\n2. 左侧选择演示数据\n3. 点击“开始审计”\n4. 展示风险发现、AI 叙述和下载区", 858, 166, 330, 160, C.blue);
+  card(slide, ctx, "这版演示是什么", "跨境电商资金流审计 Agent：模拟 Anker 风格交易流水，覆盖平台收入、广告、退款、FX、ERP 缺口等异常。", 858, 354, 330, 120, C.green);
+  card(slide, ctx, "演示边界", "课堂使用合成交易数据；真实客户资料需要先脱敏，或放在私有化模型和权限环境里处理。", 858, 502, 330, 100, C.violet);
   footer(slide, ctx, 2);
   return slide;
 }
@@ -173,11 +173,11 @@ async function slide02(presentation, ctx) {
 async function slide03(presentation, ctx) {
   const slide = presentation.slides.add();
   bg(slide, ctx);
-  title(slide, ctx, "PERSONAL STARTING POINT", "最初的跨境资金多 Agent 能跑，但问题不是运行，而是不可信。", "Speaker A");
+  title(slide, ctx, "PERSONAL STARTING POINT", "最初做的就是跨境电商资金审计 Agent：能跑，但可信度还不够。", "Speaker A");
   const stages = [
-    ["01", "第一版：多 Agent + 前端", "让不同 Agent 分别做数据提取、合规分析和审计合伙人复核，前端可以上传材料并输出风险判断。", C.blue],
+    ["01", "第一版：多 Agent + 前端", "前端选择演示数据或上传 CSV，后端生成交易流水、跑规则、再给出 AI 审计叙述。", C.blue],
     ["02", "发现问题：结论像真的", "模型说一笔交易有风险，但很难知道它基于哪条规则、哪段材料、哪个字段。", C.red],
-    ["03", "需求收敛：先刷底稿", "把目标从“自由审计 Agent”收敛到自动填写底稿、报销单审核这类更稳定的流程节点。", C.green],
+    ["03", "课堂展示：资金流主线", "这次展示聚焦跨境电商平台流水、规则异常、AI 审计叙述和人工复核。", C.green],
   ];
   stages.forEach((s, i) => {
     const x = 82 + i * 372;
@@ -232,20 +232,20 @@ async function slide06(presentation, ctx) {
   bg(slide, ctx);
   title(slide, ctx, "WORKFLOW FIRST", "在财务场景里，Workflow 通常优于完全自主 Agent。", "Speaker A");
   const steps = [
-    ["01", "材料识别", "票据/流水/底稿"],
-    ["02", "制度检索", "准则/报销政策"],
-    ["03", "字段比对", "金额/日期/主体"],
-    ["04", "异常判断", "规则 + 模型"],
-    ["05", "证据引用", "来源留痕"],
-    ["06", "人工复核", "低置信度兜底"],
-    ["07", "结果归档", "Excel/日志"],
+    ["01", "数据摄入", "演示/CSV"],
+    ["02", "清洗评分", "缺失/重复/FX"],
+    ["03", "规则扫描", "ISA 240/520"],
+    ["04", "AI 分析", "DeepSeek/离线"],
+    ["05", "资金核对", "应收/实收"],
+    ["06", "报告生成", "图表/Markdown"],
+    ["07", "人工复核", "高风险兜底"],
   ];
   steps.forEach((s, i) => {
     const x = 56 + i * 168;
     step(slide, ctx, s[0], s[1], s[2], x, 182, 134, 122, [C.blue, C.green, C.violet, C.amber, C.blue, C.red, C.green][i]);
     if (i < steps.length - 1) t(slide, ctx, "→", x + 136, 224, 30, 26, { size: 20, color: "#94a3b8", bold: true, align: "center" });
   });
-  card(slide, ctx, "Agent 的位置", "Agent 只应该在某些节点里做智能任务，比如识别异常、检索制度、解释证据，而不是自己控制整个财务流程。", 112, 384, 430, 120, C.blue);
+  card(slide, ctx, "Agent 的位置", "Agent 只在风险解释、补充发现、合规分析等节点做智能任务；交易清洗和规则扫描仍由确定性代码承担。", 112, 384, 430, 120, C.blue);
   box(slide, ctx, 612, 382, 520, 126, { fill: "#0f172a", stroke: "#0f172a" });
   t(slide, ctx, "财务 AI 不是让模型自由发挥，而是把模型的不确定性，关进一个确定性的流程里。", 648, 416, 448, 58, { size: 24, color: C.white, bold: true, align: "center" });
   footer(slide, ctx, 6);
@@ -256,9 +256,9 @@ async function slide07(presentation, ctx) {
   const slide = presentation.slides.add();
   bg(slide, ctx);
   title(slide, ctx, "WHY NOT FULL AUTO", "全流程自动化很难，因为三件事绕不开。", "Speaker A");
-  card(slide, ctx, "幻觉不可接受", "财务和审计不是写作场景。模型一旦把缺失证据说成确定事实，后果会直接进入工作底稿和复核链条。", 86, 186, 310, 210, C.red);
+  card(slide, ctx, "幻觉不可接受", "财务和审计不是写作场景。模型一旦把缺失证据说成确定事实，会直接影响风险判断和后续审计程序。", 86, 186, 310, 210, C.red);
   card(slide, ctx, "数据高度保密", "真实客户材料不适合随意走远端 API 或公开 Agent 工具。更现实的方向是脱敏、权限隔离和私有化部署。", 486, 186, 310, 210, C.blue);
-  card(slide, ctx, "责任归属必须是人", "像实习生底稿一样，最后需要正式人员复核把关。Agent 只能辅助，不能替代责任主体。", 886, 186, 310, 210, C.green);
+  card(slide, ctx, "责任归属必须是人", "Agent 可以提示高风险交易、生成分析叙述，但最终审计判断必须由审计人员复核把关。", 886, 186, 310, 210, C.green);
   box(slide, ctx, 156, 496, 880, 88, { fill: "#fff7ed", stroke: "#fed7aa" });
   t(slide, ctx, "所以我不把这个项目包装成“全自动审计”，而是讲成可信辅助：降低低风险重复劳动，把关键判断留给人。", 204, 524, 790, 34, { size: 22, color: C.ink, bold: true, align: "center" });
   footer(slide, ctx, 7);
@@ -268,13 +268,13 @@ async function slide07(presentation, ctx) {
 async function slide08(presentation, ctx) {
   const slide = presentation.slides.add();
   bg(slide, ctx);
-  title(slide, ctx, "WHY IT STILL MATTERS", "不能全自动，不代表没有商业价值：替代实习生 dirtywork 可能更早发生。", "Speaker A");
+  title(slide, ctx, "WHY IT STILL MATTERS", "不能全自动，不代表没有价值：资金流异常扫描本身就值得做。", "Speaker A");
   box(slide, ctx, 128, 170, 940, 92, { fill: "#0f172a", stroke: "#0f172a" });
-  t(slide, ctx, "人做的时间 -（AI 做的时间 + 人核对并修改的时间）> 0", 166, 196, 870, 38, { size: 28, color: C.white, bold: true, align: "center" });
-  card(slide, ctx, "最先被改造的任务", "货币资金底稿、简单抽凭、复制粘贴、筛选和查找函数等高频模板化工作。", 86, 330, 310, 170, C.blue);
-  card(slide, ctx, "Harness 约束降低风险", "用模板、字段 schema、规则扫描、cell_map 和 mock/私有部署，把模型限制在可检查的动作里。", 486, 330, 310, 170, C.violet);
-  card(slide, ctx, "复核人兜底责任", "产出像实习生交底稿一样进入 Maker-Checker 流程；AI 负责提效，人负责最终判断。", 886, 330, 310, 170, C.green);
-  t(slide, ctx, "课堂里可以把这个观点讲得更尖锐：全流程自动化很难，但低风险重复劳动会先被重构。", 134, 590, 940, 28, { size: 20, color: C.ink, bold: true, align: "center" });
+  t(slide, ctx, "人做的时间 -（AI 跑流水线 + 人复核高风险项的时间）> 0", 166, 196, 870, 38, { size: 28, color: C.white, bold: true, align: "center" });
+  card(slide, ctx, "最先被改造的任务", "多平台流水归集、异常金额筛选、FX 转换检查、重复入账和广告投放超支扫描。", 86, 330, 310, 170, C.blue);
+  card(slide, ctx, "Harness 约束降低风险", "用合成数据、字段 schema、规则扫描、RAG 依据和 mock/私有部署，把模型限制在可检查动作里。", 486, 330, 310, 170, C.violet);
+  card(slide, ctx, "复核人兜底责任", "系统产出风险清单和审计叙述，审计人员复核证据、确认重大性和后续程序。", 886, 330, 310, 170, C.green);
+  t(slide, ctx, "课堂里可以把观点讲清楚：全自动审计很难，但资金流异常扫描和风险叙述可以先提升效率。", 134, 590, 940, 28, { size: 20, color: C.ink, bold: true, align: "center" });
   footer(slide, ctx, 8);
   return slide;
 }
@@ -282,14 +282,14 @@ async function slide08(presentation, ctx) {
 async function slide09(presentation, ctx) {
   const slide = presentation.slides.add();
   bg(slide, ctx);
-  title(slide, ctx, "CURRENT DESIGN", "这版项目就是把最初的大问题收敛成一个可复核的底稿 Workflow。", "Speaker A / B");
+  title(slide, ctx, "CURRENT DESIGN", "当前项目主线：跨境电商交易流水进入规则引擎和多 Agent 审计分析。", "Speaker A / B");
   const stages = [
-    ["01", "材料包", "合成案例/上传文件"],
-    ["02", "规则扫描", "8 类跨境风险"],
-    ["03", "RAG 证据", "准则片段/fallback"],
-    ["04", "三 Agent", "提取/合规/复核"],
-    ["05", "底稿输出", "Excel/Markdown"],
-    ["06", "人工复核", "证据缺口留痕"],
+    ["01", "数据输入", "演示/CSV"],
+    ["02", "清洗评分", "质量控制"],
+    ["03", "规则扫描", "8 类风险"],
+    ["04", "AI 分析", "DeepSeek/mock"],
+    ["05", "报告输出", "Markdown/CSV"],
+    ["06", "人工复核", "高风险留痕"],
   ];
   stages.forEach((s, i) => {
     const x = 58 + i * 196;
@@ -299,7 +299,7 @@ async function slide09(presentation, ctx) {
   await ctx.addImage(slide, { path: ASSETS.homeShot, x: 92, y: 386, w: 430, h: 210, fit: "contain", alt: "Streamlit home screenshot" });
   metric(slide, ctx, "52", "tests passed", "pytest 验证基础链路", 590, 388, 178, C.green);
   metric(slide, ctx, "Mock", "默认演示模式", "课堂不调用远端 API", 800, 388, 178, C.blue);
-  metric(slide, ctx, "Cell Map", "公式区保护", "只写入模板可填区域", 1010, 388, 178, C.violet);
+  metric(slide, ctx, "Report", "审计报告", "风险清单 + 图表 + 叙述", 1010, 388, 178, C.violet);
   footer(slide, ctx, 9);
   return slide;
 }
@@ -326,10 +326,10 @@ async function slide11(presentation, ctx) {
   t(slide, ctx, "项目结构", 690, 166, 180, 24, { size: 17, color: C.green, bold: true });
 
   const flow = [
-    ["输入层", "CSV / PDF / 示例材料\n审计知识片段", C.blue],
-    ["Pipeline", "data_tools 结构化\nRAG 检索与 fallback", C.green],
-    ["Agent 讨论", "Data Extractor\nCompliance Checker\nAudit Partner", C.violet],
-    ["输出层", "Markdown 报告\nExcel 标准底稿\n人工复核点", C.amber],
+    ["输入层", "演示交易流水\n或上传 CSV", C.blue],
+    ["Pipeline", "数据清洗评分\n规则异常扫描", C.green],
+    ["AI 分析", "DeepSeek 叙述\n资金核对", C.violet],
+    ["输出层", "Markdown 报告\n清洗后 CSV\nAI 分析 JSON", C.amber],
   ];
   flow.forEach((f, i) => {
     const y = 206 + i * 100;
@@ -341,15 +341,15 @@ async function slide11(presentation, ctx) {
 
   box(slide, ctx, 608, 206, 548, 380, { fill: "#ffffff", stroke: C.line });
   const tree = [
-    ["audit_rag/", "核心能力包", C.blue],
-    ["  agents.py", "三 Agent 提示词 / mock 响应", C.violet],
-    ["  pipeline.py", "流程编排：材料 → RAG → Agent", C.green],
-    ["  rag.py", "ChromaDB 检索 + 关键词 fallback", C.green],
-    ["  data_tools.py", "凭证加载与风险规则扫描", C.amber],
-    ["  reporting.py", "Markdown 工作底稿草稿", C.blue],
-    ["cli.py / streamlit_app.py", "命令行入口 / 课堂前端", C.blue],
-    ["benchmarks/", "合成材料与隔离评测设计", C.red],
-    ["outputs/", "生成报告与 Excel 底稿", C.green],
+    ["streamlit_app.py", "课堂前端：配置、运行、结果展示", C.blue],
+    ["src/data_ingestion/", "合成交易流水与结算计划", C.green],
+    ["src/cleaning/", "数据清洗、质量评分、异常字段", C.green],
+    ["src/audit/", "ISA 240/520 规则扫描", C.amber],
+    ["src/llm/", "DeepSeek 分类、叙述、资金核对", C.violet],
+    ["src/reporting/", "Markdown 报告与图表", C.blue],
+    ["audit_rag/", "多 Agent + RAG 原型层", C.violet],
+    ["cli.py", "doctor / where / run / search", C.blue],
+    ["output/", "报告、图表、清洗后数据", C.green],
     ["docs/ & assets/", "README 截图、Logo、说明文档", C.violet],
   ];
   tree.forEach((row, i) => {
@@ -369,11 +369,11 @@ async function slide12(presentation, ctx) {
   bg(slide, ctx, C.dark);
   await ctx.addImage(slide, { path: ASSETS.mark, x: 92, y: 88, w: 130, h: 130, fit: "contain", alt: "project mark" });
   t(slide, ctx, "总结：能跑是第一步，可信才是财务 AI 的生产门槛。", 270, 94, 850, 72, { size: 36, color: C.white, bold: true });
-  t(slide, ctx, "这个项目的价值不是证明 Agent 可以全自动审计，而是证明它能在确定流程里承担可复核的高频工作。", 274, 188, 820, 44, { size: 20, color: "#cbd5e1" });
+  t(slide, ctx, "这个项目的价值不是证明 Agent 可以全自动审计，而是证明它能在资金流场景里先做可复核的异常扫描和风险叙述。", 274, 188, 820, 44, { size: 20, color: "#cbd5e1" });
   const next = [
     ["评测器", "合成数据 + Precision / Recall / F1"],
-    ["对比实验", "和真实审计师底稿做差异分析"],
-    ["底稿扩展", "应收、存货、收入截止"],
+    ["对比实验", "和审计人员风险判断做差异分析"],
+    ["场景扩展", "更多平台、币种、物流和税务数据"],
     ["私有化治理", "模型、权限、日志、审计轨迹"],
   ];
   next.forEach((n, i) => card(slide, ctx, n[0], n[1], 104 + i * 278, 322, 220, 130, [C.blue, C.green, C.violet, C.amber][i]));

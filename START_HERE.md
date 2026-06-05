@@ -1,14 +1,15 @@
 # 从这里开始
 
-这个项目是你的“跨境电商资金流审计 Agent + RAG + Excel 标准底稿”课堂展示原型。它的核心不是让模型自由聊天，而是把审计材料、准则依据、Agent 复核和底稿写入组织成可演示、可检查、可继续评测的工作流。
+这个项目的课堂主线是“跨境电商资金流 AI 审计 Agent”。它演示的是平台交易流水如何进入数据清洗、规则扫描、DeepSeek/离线审计叙述、资金核对和报告输出。
 
 ## 推荐演示顺序
 
 1. 启动前端：`streamlit run streamlit_app.py --server.address 0.0.0.0 --server.port 8501`
 2. 打开局域网地址：`http://<WLAN-IP>:8501`
-3. 点击“使用内置示例生成底稿”
-4. 下载生成的 C 货币资金 Excel 底稿
-5. 回到 PPT 讲为什么要做、怎么控风险、怎么从 Demo 走向产品化
+3. 左侧保持“演示数据（自动生成）”
+4. 点击“开始审计”
+5. 展示关键财务指标、审计发现清单、AI 审计叙述和下载区
+6. 回到 PPT 讲为什么这个 Agent 需要证据链、规则边界和人工复核
 
 局域网 IP 检查和课堂流程见 [`docs/DEMO_RUNBOOK.md`](docs/DEMO_RUNBOOK.md)。
 
@@ -17,8 +18,8 @@
 ```text
 README.md
 docs/PROJECT_STRUCTURE.md
-AGENT_OVERVIEW.md
 docs/DEMO_RUNBOOK.md
+ARCHITECTURE.md
 ```
 
 核心代码：
@@ -26,12 +27,14 @@ docs/DEMO_RUNBOOK.md
 ```text
 streamlit_app.py
 cli.py
+src/agent/orchestrator.py
+src/data_ingestion/data_generator.py
+src/audit/anomaly_detector.py
+src/llm/deepseek_client.py
+src/reporting/report_generator.py
 audit_rag/pipeline.py
 audit_rag/agents.py
-audit_rag/orchestrator.py
 audit_rag/hybrid_retriever.py
-benchmarks/agent/cash_workpaper_filler.py
-benchmarks/agent/pdf_confirmations.py
 ```
 
 ## 最简单的检查命令
@@ -42,7 +45,7 @@ python cli.py where
 python -m pytest -q
 ```
 
-`doctor` 会检查 API Key、模板目录和关键依赖。mock 演示不需要 API Key。
+`doctor` 会检查 API Key、依赖和本地目录。课堂演示优先使用合成数据；如果不调用 DeepSeek，也能跑规则引擎和报告输出。
 
 ## 免费跑一次跨境审计报告
 
@@ -54,21 +57,6 @@ python cli.py run --case-type cross_border --mode mock
 
 ```text
 output/audit_reports/
-```
-
-## 免费生成一次 C 货币资金底稿
-
-```powershell
-python cli.py workpaper --case-type cash --mode mock `
-  --materials-dir benchmarks/materials/case_001_minimal `
-  --template-root outputs/clean_templates `
-  --template-keyword 核心优化版
-```
-
-输出在：
-
-```text
-output/workpapers/
 ```
 
 ## 搜索审计知识库
@@ -85,4 +73,4 @@ python cli.py search --query "转让定价 BEPS 关联方" --top-k 3
 python cli.py run --case-type cross_border --mode autogen
 ```
 
-真实客户数据请先脱敏，或接私有化模型。课堂展示优先使用 mock 模式。
+真实客户数据请先脱敏，或接私有化模型。课堂展示优先使用演示数据。

@@ -98,7 +98,7 @@ def render_assets() -> None:
     draw.text((434, 195), "TRUSTED MULTI-AGENT AUDIT WORKFLOW", font=_font(30, bold=True), fill=(147, 197, 253, 255))
     draw.text(
         (434, 260),
-        "Structured evidence · RAG provenance · Maker-Checker review · Excel workpapers",
+        "Structured evidence · RAG provenance · Maker-Checker review · Risk reports",
         font=_font(31),
         fill=(203, 213, 225, 255),
     )

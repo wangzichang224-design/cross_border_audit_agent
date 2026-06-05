@@ -1,816 +1,504 @@
-# -*- coding: utf-8 -*-
-"""Minimal Streamlit UI for generating a clean C cash workpaper.
+"""
+Streamlit frontend for the Cross-border E-commerce AI Audit Agent.
 
 Run:
     streamlit run streamlit_app.py
 """
 
-from __future__ import annotations
-
-import json
-import re
 import sys
-from datetime import date, datetime
+import json
+import logging
+from collections import Counter
+from datetime import datetime
 from pathlib import Path
-from typing import Iterable
 
-import base64
 import pandas as pd
 import streamlit as st
 
-
-PROJECT_ROOT = Path(__file__).resolve().parent
-sys.path.insert(0, str(PROJECT_ROOT))
-
-DEFAULT_TEMPLATE_ROOT = PROJECT_ROOT / "outputs" / "clean_templates"
-DEFAULT_TEMPLATE_KEYWORD = "核心优化版"
-UPLOAD_MATERIALS_DIR = PROJECT_ROOT / "output" / "uploaded_materials"
-SAMPLE_MATERIALS_DIR = PROJECT_ROOT / "benchmarks" / "materials" / "case_001_minimal"
-BRAND_LOGO_PATH = PROJECT_ROOT / "assets" / "brand" / "crossagent-logo.png"
-BRAND_MARK_PATH = PROJECT_ROOT / "assets" / "brand" / "crossagent-mark.png"
-
-
-st.set_page_config(
-    page_title="Cross-Border Audit Agent",
-    page_icon=None,
-    layout="centered",
-    initial_sidebar_state="collapsed",
-)
-
-
-st.markdown(
-    """
-<style>
-    :root {
-        --ink: #111827;
-        --muted: #667085;
-        --line: #d9e2ec;
-        --surface: #ffffff;
-        --soft: #f6f8fb;
-        --accent: #2563eb;
-        --accent-dark: #0f766e;
-        --green: #16a34a;
-        --violet: #7c3aed;
-        --warn: #a16207;
-    }
-    .stApp {
-        background: var(--soft);
-        color: var(--ink);
-    }
-    .block-container {
-        max-width: 1080px;
-        padding-top: 1.25rem;
-        padding-bottom: 3rem;
-    }
-    .hero {
-        background: #08111f;
-        border: 1px solid #1e3a5f;
-        border-radius: 8px;
-        padding: 26px 30px;
-        margin-bottom: 18px;
-        color: #f8fafc;
-        overflow: hidden;
-    }
-    .hero-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 250px;
-        gap: 24px;
-        align-items: center;
-    }
-    .hero-logo {
-        max-width: 100%;
-        border-radius: 8px;
-    }
-    .hero h1 {
-        margin: 0 0 8px 0;
-        font-size: 36px;
-        line-height: 1.2;
-        letter-spacing: 0;
-    }
-    .hero p {
-        color: #cbd5e1;
-        font-size: 15px;
-        line-height: 1.7;
-        margin: 0;
-    }
-    .eyebrow {
-        color: #93c5fd;
-        font-size: 12px;
-        font-weight: 800;
-        letter-spacing: .08em;
-        text-transform: uppercase;
-        margin-bottom: 8px;
-    }
-    .badge-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 18px;
-    }
-    .badge {
-        border: 1px solid rgba(147,197,253,.35);
-        background: rgba(15,23,42,.75);
-        color: #e0f2fe;
-        border-radius: 999px;
-        padding: 5px 11px;
-        font-size: 12px;
-        font-weight: 700;
-    }
-    .evidence-strip {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 10px;
-        margin: 0 0 16px 0;
-    }
-    .evidence-item {
-        background: var(--surface);
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 13px 14px;
-    }
-    .evidence-item b {
-        display: block;
-        color: var(--ink);
-        font-size: 18px;
-        margin-bottom: 2px;
-    }
-    .evidence-item span {
-        color: var(--muted);
-        font-size: 12px;
-        line-height: 1.45;
-    }
-    .panel {
-        background: var(--surface);
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 18px;
-        margin-bottom: 14px;
-    }
-    .demo-panel {
-        border-color: #bfdbfe;
-        background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
-    }
-    .demo-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 1.5fr) minmax(240px, .9fr);
-        gap: 18px;
-        align-items: center;
-    }
-    .mini-title {
-        font-size: 16px;
-        font-weight: 750;
-        margin-bottom: 10px;
-    }
-    .hint {
-        color: var(--muted);
-        font-size: 13px;
-        line-height: 1.6;
-    }
-    .ok {
-        color: #047857;
-        font-weight: 700;
-    }
-    .warn {
-        color: var(--warn);
-        font-weight: 700;
-    }
-    .flow {
-        display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 8px;
-        margin-top: 12px;
-    }
-    .flow-step {
-        border: 1px solid #dbeafe;
-        background: #ffffff;
-        border-radius: 8px;
-        padding: 10px;
-        min-height: 74px;
-    }
-    .flow-step b {
-        display: block;
-        color: #1d4ed8;
-        font-size: 12px;
-        margin-bottom: 4px;
-    }
-    .flow-step span {
-        color: #475569;
-        font-size: 12px;
-        line-height: 1.35;
-    }
-    div[data-testid="stFileUploader"] {
-        background: #fbfcfe;
-        border: 1px solid #e5eaf0;
-        border-radius: 8px;
-        padding: 8px 10px;
-    }
-    div[data-testid="stMetric"] {
-        background: #ffffff;
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 10px 12px;
-    }
-    @media (max-width: 760px) {
-        .hero-grid,
-        .demo-grid,
-        .evidence-strip,
-        .flow {
-            grid-template-columns: 1fr;
-        }
-        .hero h1 {
-            font-size: 30px;
-        }
-    }
-</style>
-""",
-    unsafe_allow_html=True,
-)
-
-
-TRIAL_BALANCE_ALIASES = {
-    "account_name": ["account_name", "科目", "科目名称", "账户类型", "报表项目"],
-    "bank_name": ["bank_name", "银行", "银行名称", "开户行"],
-    "bank_account": ["bank_account", "银行账号", "账号", "账户", "银行账户"],
-    "currency": ["currency", "币种", "货币"],
-    "period_end_balance_local": [
-        "period_end_balance_local",
-        "期末余额",
-        "期末本币余额",
-        "本币余额",
-        "余额",
-    ],
-    "period_end_balance_fx": [
-        "period_end_balance_fx",
-        "期末原币余额",
-        "原币余额",
-        "期末余额原币",
-    ],
-    "fx_rate": ["fx_rate", "汇率"],
-    "is_restricted": ["is_restricted", "是否受限", "受限"],
-    "restriction_note": ["restriction_note", "受限说明", "受限原因", "备注"],
-    "prior_year_balance": ["prior_year_balance", "上年余额", "上期余额", "上年审定数"],
-}
-
-JOURNAL_ALIASES = {
-    "date": ["date", "日期", "凭证日期", "记账日期"],
-    "voucher_id": ["voucher_id", "凭证号", "凭证编号", "字号"],
-    "account_code": ["account_code", "科目编码", "会计科目编码"],
-    "account_name": ["account_name", "科目", "科目名称", "会计科目"],
-    "debit": ["debit", "借方", "借方金额"],
-    "credit": ["credit", "贷方", "贷方金额"],
-    "summary": ["summary", "摘要", "说明"],
-    "counterparty": ["counterparty", "对方科目", "对手方", "往来单位"],
-    "bank_name": ["bank_name", "银行", "银行名称", "开户行"],
-    "bank_account": ["bank_account", "银行账号", "账号", "银行账户"],
-    "currency": ["currency", "币种", "货币"],
-}
-
-CONFIRMATION_ALIASES = {
-    "bank_name": ["bank_name", "银行", "银行名称", "开户行"],
-    "bank_account": ["bank_account", "银行账号", "账号", "银行账户"],
-    "currency": ["currency", "币种", "货币"],
-    "confirmed_balance": ["confirmed_balance", "回函余额", "确认余额", "银行确认余额"],
-    "restricted_amount": ["restricted_amount", "受限金额", "冻结金额", "保证金金额"],
-    "restriction_nature": ["restriction_nature", "受限性质", "受限原因", "备注"],
-    "confirmation_date": ["confirmation_date", "回函日期", "函证日期"],
-    "confirmation_index": ["confirmation_index", "索引", "索引号"],
-}
-
-
-def _normalize_name(value: object) -> str:
-    return (
-        str(value)
-        .strip()
-        .lower()
-        .replace(" ", "")
-        .replace("_", "")
-        .replace("-", "")
-        .replace("（", "(")
-        .replace("）", ")")
-    )
-
-
-def _read_uploaded_table(uploaded_file) -> pd.DataFrame:
-    suffix = Path(uploaded_file.name).suffix.lower()
-    if suffix in {".xlsx", ".xls"}:
-        return pd.read_excel(uploaded_file)
-    return pd.read_csv(uploaded_file, encoding="utf-8-sig")
-
-
-def _canonicalize_columns(df: pd.DataFrame, aliases: dict[str, list[str]]) -> pd.DataFrame:
-    normalized = {_normalize_name(col): col for col in df.columns}
-    out = pd.DataFrame(index=df.index)
-    for canonical, candidates in aliases.items():
-        found = None
-        for candidate in candidates:
-            found = normalized.get(_normalize_name(candidate))
-            if found is not None:
-                break
-        if found is not None:
-            out[canonical] = df[found]
-    return out
-
-
-def _ensure_columns(
-    df: pd.DataFrame,
-    required: Iterable[str],
-    optional_defaults: dict[str, object],
-    label: str,
-) -> pd.DataFrame:
-    missing = [col for col in required if col not in df.columns]
-    if missing:
-        raise ValueError(f"{label}缺少列：{', '.join(missing)}")
-    for col, default in optional_defaults.items():
-        if col not in df.columns:
-            df[col] = default
-    return df
-
-
-def _clean_amount(value: object, default: float = 0.0) -> float:
-    if pd.isna(value):
-        return default
-    text = str(value).replace(",", "").strip()
-    if not text:
-        return default
-    return float(text)
-
-
-def _clean_bool(value: object) -> bool:
-    if pd.isna(value):
-        return False
-    text = str(value).strip().lower()
-    return text in {"1", "true", "yes", "y", "是", "受限"}
-
-
-def _safe_path_part(value: str, fallback: str) -> str:
-    cleaned = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", str(value)).strip(" ._")
-    return cleaned or fallback
-
-
-def _prepare_trial_balance(df: pd.DataFrame, currency: str) -> pd.DataFrame:
-    df = _canonicalize_columns(df, TRIAL_BALANCE_ALIASES)
-    df = _ensure_columns(
-        df,
-        required=["account_name", "period_end_balance_local"],
-        optional_defaults={
-            "bank_name": "",
-            "bank_account": "",
-            "currency": currency,
-            "period_end_balance_fx": None,
-            "fx_rate": 1.0,
-            "is_restricted": False,
-            "restriction_note": "",
-            "prior_year_balance": 0.0,
-        },
-        label="试算平衡表",
-    )
-    df["currency"] = df["currency"].fillna(currency).replace("", currency)
-    df["period_end_balance_local"] = df["period_end_balance_local"].map(_clean_amount)
-    df["period_end_balance_fx"] = df.apply(
-        lambda row: _clean_amount(
-            row["period_end_balance_fx"],
-            default=float(row["period_end_balance_local"]),
-        ),
-        axis=1,
-    )
-    df["fx_rate"] = df["fx_rate"].map(lambda value: _clean_amount(value, 1.0))
-    df["is_restricted"] = df["is_restricted"].map(_clean_bool)
-    df["prior_year_balance"] = df["prior_year_balance"].map(_clean_amount)
-    return df[
-        [
-            "account_name",
-            "bank_name",
-            "bank_account",
-            "currency",
-            "period_end_balance_local",
-            "period_end_balance_fx",
-            "fx_rate",
-            "is_restricted",
-            "restriction_note",
-            "prior_year_balance",
-        ]
-    ]
-
-
-def _prepare_journal(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-    raw = _canonicalize_columns(df, JOURNAL_ALIASES)
-    gl = _ensure_columns(
-        raw.copy(),
-        required=["date", "account_code", "account_name", "debit", "credit", "summary"],
-        optional_defaults={"voucher_id": "", "counterparty": ""},
-        label="序时账",
-    )
-    gl["voucher_id"] = [
-        value if str(value).strip() else f"JV{idx + 1:05d}"
-        for idx, value in enumerate(gl["voucher_id"])
-    ]
-    gl["debit"] = gl["debit"].map(_clean_amount)
-    gl["credit"] = gl["credit"].map(_clean_amount)
-    gl_out = gl[
-        [
-            "date",
-            "voucher_id",
-            "account_code",
-            "account_name",
-            "debit",
-            "credit",
-            "summary",
-            "counterparty",
-        ]
-    ]
-
-    bank_headers = [
-        "date",
-        "bank_name",
-        "bank_account",
-        "currency",
-        "debit",
-        "credit",
-        "balance",
-        "description",
-        "counterparty",
-        "txn_id",
-    ]
-    if {"bank_name", "bank_account"}.issubset(raw.columns):
-        bank = raw.copy()
-        bank["currency"] = bank.get("currency", "CNY")
-        bank["balance"] = 0.0
-        bank["description"] = bank.get("summary", "")
-        bank["txn_id"] = gl["voucher_id"]
-        bank["debit"] = gl["credit"]
-        bank["credit"] = gl["debit"]
-        bank["counterparty"] = gl["counterparty"]
-        bank_out = bank[bank_headers]
-    else:
-        bank_out = pd.DataFrame(columns=bank_headers)
-    return gl_out, bank_out
-
-
-def _prepare_confirmations(df: pd.DataFrame, currency: str) -> pd.DataFrame:
-    df = _canonicalize_columns(df, CONFIRMATION_ALIASES)
-    df = _ensure_columns(
-        df,
-        required=["bank_name", "bank_account", "confirmed_balance"],
-        optional_defaults={
-            "currency": currency,
-            "restricted_amount": 0.0,
-            "restriction_nature": "",
-            "confirmation_date": "",
-            "confirmation_index": "",
-        },
-        label="询证函回函",
-    )
-    df["currency"] = df["currency"].fillna(currency).replace("", currency)
-    df["confirmed_balance"] = df["confirmed_balance"].map(_clean_amount)
-    df["restricted_amount"] = df["restricted_amount"].map(_clean_amount)
-    return df[
-        [
-            "bank_name",
-            "bank_account",
-            "currency",
-            "confirmed_balance",
-            "restricted_amount",
-            "restriction_nature",
-            "confirmation_date",
-            "confirmation_index",
-        ]
-    ]
-
-
-def _build_reconciliation(period_summary: pd.DataFrame, confirmations: pd.DataFrame) -> pd.DataFrame:
-    rows = []
-    ps_by_account = {
-        str(row.bank_account): row
-        for row in period_summary.itertuples(index=False)
-        if str(row.bank_account).strip()
-    }
-    for conf in confirmations.itertuples(index=False):
-        ps = ps_by_account.get(str(conf.bank_account))
-        if ps is None:
-            continue
-        diff = float(conf.confirmed_balance) - float(ps.period_end_balance_fx)
-        if abs(diff) < 0.01:
-            continue
-        rows.append(
-            {
-                "category": "book_plus" if diff > 0 else "book_minus",
-                "description": "回函余额与账面余额差异，待进一步核对",
-                "amount": abs(diff),
-                "index": "函证/银行回函",
-            }
-        )
-    return pd.DataFrame(rows, columns=["category", "description", "amount", "index"])
-
-
-def _write_materials_package(
-    *,
-    client_name: str,
-    period_end: date,
-    analysis_date: date,
-    te: float,
-    sad: float,
-    currency: str,
-    trial_balance_file,
-    journal_file,
-    confirmation_file,
-) -> tuple[Path, dict[str, int]]:
-    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    safe_client = _safe_path_part(client_name, "uploaded_case")
-    materials_dir = UPLOAD_MATERIALS_DIR / f"{stamp}_{safe_client}"
-    materials_dir.mkdir(parents=True, exist_ok=True)
-
-    trial_balance = _prepare_trial_balance(_read_uploaded_table(trial_balance_file), currency)
-    gl_bank, bank_statement = _prepare_journal(_read_uploaded_table(journal_file))
-    confirmations = _prepare_confirmations(_read_uploaded_table(confirmation_file), currency)
-    reconciliation = _build_reconciliation(trial_balance, confirmations)
-
-    metadata = {
-        "case_id": materials_dir.name,
-        "client_name": client_name or "未命名客户",
-        "period_end": period_end.isoformat(),
-        "analysis_date": analysis_date.isoformat(),
-        "te": float(te),
-        "sad": float(sad),
-        "gaap": "企业会计准则",
-        "currency": currency,
-        "variation_pct": 0.1,
-    }
-    (materials_dir / "case_metadata.json").write_text(
-        json.dumps(metadata, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    trial_balance.to_csv(materials_dir / "period_summary.csv", index=False, encoding="utf-8-sig")
-    gl_bank.to_csv(materials_dir / "gl_bank.csv", index=False, encoding="utf-8-sig")
-    bank_statement.to_csv(materials_dir / "bank_statement.csv", index=False, encoding="utf-8-sig")
-    confirmations.to_csv(materials_dir / "confirmations.csv", index=False, encoding="utf-8-sig")
-    reconciliation.to_csv(materials_dir / "reconciliation.csv", index=False, encoding="utf-8-sig")
-
-    counts = {
-        "试算平衡表": len(trial_balance),
-        "序时账": len(gl_bank),
-        "询证函回函": len(confirmations),
-    }
-    return materials_dir, counts
-
-
-def _find_template() -> Path:
-    from scripts.generate_workpaper import find_template
-
-    return find_template(DEFAULT_TEMPLATE_ROOT, DEFAULT_TEMPLATE_KEYWORD)
-
-
-def _api_key_configured() -> bool:
-    from audit_rag.config import get_settings
-
-    return bool(get_settings().deepseek_api_key)
-
-
-def _run_cash_workpaper(materials_dir: Path, use_llm: bool) -> Path:
-    from benchmarks.agent.cash_workpaper_filler import fill_cash_workpaper
-    from benchmarks.agent.materials_loader import load_case_materials
-    from scripts.generate_workpaper import _build_cash_output_path
-
-    materials = load_case_materials(materials_dir)
-    template_path = _find_template()
-    output_path = _build_cash_output_path(
-        template_path,
-        materials.meta.client_name,
-        materials.meta.case_id,
-    )
-    fill_cash_workpaper(
-        materials_dir=materials_dir,
-        template_path=template_path,
-        output_path=output_path,
-        llm_enhance=use_llm,
-    )
-    return output_path
-
-
-def _image_data_uri(path: Path) -> str:
-    if not path.exists():
-        return ""
-    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
-    return f"data:image/png;base64,{encoded}"
-
-
-def _material_counts(materials_dir: Path) -> dict[str, int]:
-    files = {
-        "试算平衡表": materials_dir / "period_summary.csv",
-        "序时账": materials_dir / "gl_bank.csv",
-        "询证函回函": materials_dir / "confirmations.csv",
-    }
-    counts: dict[str, int] = {}
-    for label, path in files.items():
-        if not path.exists():
-            counts[label] = 0
-            continue
+# ── UTF-8 safety (Windows) ──────────────────────────────────────────────────
+for _s in (sys.stdout, sys.stderr):
+    if hasattr(_s, "reconfigure"):
         try:
-            counts[label] = len(pd.read_csv(path))
+            _s.reconfigure(encoding="utf-8", errors="replace")
         except Exception:
-            counts[label] = 0
-    return counts
+            pass
 
+sys.path.insert(0, str(Path(__file__).parent))
 
-def _record_result(output_path: Path, materials_dir: Path, counts: dict[str, int]) -> None:
-    st.session_state["last_output_path"] = str(output_path)
-    st.session_state["last_materials_dir"] = str(materials_dir)
-    st.session_state["last_counts"] = counts
+from config import (
+    ANOMALY_THRESHOLDS,
+    DEEPSEEK_API_KEY as _CFG_DEEPSEEK_KEY,
+    RAW_DATA_DIR,
+    REPORTS_DIR,
+)
+from src.data_ingestion import generate_transactions, save_raw_data, generate_settlement_schedule
+from src.cleaning import DataCleaner
+from src.audit import RuleBasedAnomalyDetector
+from src.reporting import ReportGenerator, ReportVisualizer
+from src.llm.deepseek_client import DeepSeekClassifier, DeepSeekAuditAnalyst
 
+logging.basicConfig(level=logging.INFO)
 
-def _download_button(path: Path) -> None:
-    st.download_button(
-        "下载已生成的底稿",
-        data=path.read_bytes(),
-        file_name=path.name,
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        type="primary",
-        width="stretch",
+# ── Page config ──────────────────────────────────────────────────────────────
+st.set_page_config(
+    page_title="跨境电商 AI 审计系统",
+    page_icon="🔍",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# Resolve API key: Streamlit Cloud secrets > environment variable > empty
+try:
+    DEEPSEEK_API_KEY = st.secrets.get("DEEPSEEK_API_KEY", _CFG_DEEPSEEK_KEY)
+except Exception:
+    DEEPSEEK_API_KEY = _CFG_DEEPSEEK_KEY
+
+st.markdown("""
+<style>
+/* KPI cards */
+[data-testid="metric-container"] {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 16px;
+}
+/* Finding cards */
+.finding-card {
+    padding: 10px 14px;
+    margin: 6px 0;
+    border-radius: 6px;
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+/* Stage badge */
+.stage-ok  { color: #16a34a; font-weight: 600; }
+.stage-run { color: #2563eb; font-weight: 600; }
+</style>
+""", unsafe_allow_html=True)
+
+# ── Sidebar ──────────────────────────────────────────────────────────────────
+with st.sidebar:
+    st.title("⚙️ 审计配置")
+
+    st.subheader("数据来源")
+    demo_mode = st.radio(
+        "选择数据来源",
+        ["📊 演示数据（自动生成）", "📁 上传 CSV 文件"],
+        index=0,
     )
 
+    uploaded_file = None
+    n_days = 90
 
-def _render_result_panel() -> None:
-    output = Path(st.session_state["last_output_path"])
-    counts = st.session_state.get("last_counts", {})
-    st.markdown('<div class="panel"><div class="mini-title">生成结果</div>', unsafe_allow_html=True)
-    c1, c2, c3 = st.columns(3)
-    c1.metric("试算平衡表", f"{counts.get('试算平衡表', 0)} 行")
-    c2.metric("序时账", f"{counts.get('序时账', 0)} 行")
-    c3.metric("询证函回函", f"{counts.get('询证函回函', 0)} 行")
-    st.caption(f"输出文件：{output}")
-    _download_button(output)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-logo_uri = _image_data_uri(BRAND_LOGO_PATH)
-logo_html = f'<img class="hero-logo" src="{logo_uri}" alt="Cross-Border Audit Agent logo" />' if logo_uri else ""
-
-st.markdown(
-    f"""
-<div class="hero">
-  <div class="hero-grid">
-    <div>
-      <div class="eyebrow">Digital Finance · Trusted Agent Demo</div>
-      <h1>跨境电商资金流审计 Agent</h1>
-      <p>
-        面向数字金融课堂展示的可信 AI 审计原型：把客户材料结构化为审计证据，
-        结合规则扫描、RAG 依据、多 Agent 复核和 Excel 底稿写入，默认 mock 模式即可本地演示。
-      </p>
-      <div class="badge-row">
-        <span class="badge">No API needed for demo</span>
-        <span class="badge">RAG provenance</span>
-        <span class="badge">Maker-Checker review</span>
-        <span class="badge">Formula-safe Excel output</span>
-      </div>
-    </div>
-    <div>{logo_html}</div>
-  </div>
-</div>
-""",
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-    """
-<div class="evidence-strip">
-  <div class="evidence-item"><b>3 Agents</b><span>Data Extractor / Compliance Checker / Audit Partner</span></div>
-  <div class="evidence-item"><b>8 Risks</b><span>跨境电商资金流与合规高风险事项</span></div>
-  <div class="evidence-item"><b>52 Tests</b><span>核心检索、复核和底稿写入测试已覆盖</span></div>
-  <div class="evidence-item"><b>Mock First</b><span>课堂演示默认不外发客户数据</span></div>
-</div>
-""",
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-    """
-<div class="panel demo-panel">
-  <div class="demo-grid">
-    <div>
-      <div class="mini-title">课堂快速演示</div>
-      <div class="hint">
-        直接使用仓库内置合成材料生成 C 货币资金审计底稿，适合作为 PPT 开场后的现场演示。
-        这一路径不调用远端模型，所有金额聚合、回函核对和 Excel 写入都在本机完成。
-      </div>
-      <div class="flow">
-        <div class="flow-step"><b>Material</b><span>试算平衡表、序时账、函证</span></div>
-        <div class="flow-step"><b>Rules</b><span>金额、银行账户、调节项核对</span></div>
-        <div class="flow-step"><b>Agent</b><span>可选 LLM 文本增强</span></div>
-        <div class="flow-step"><b>Excel</b><span>写入模板可填区域</span></div>
-        <div class="flow-step"><b>Review</b><span>保留公式区与 check 行</span></div>
-      </div>
-    </div>
-    <div>
-""",
-    unsafe_allow_html=True,
-)
-
-demo_clicked = st.button("使用内置示例生成底稿", type="primary", width="stretch")
-st.caption("推荐课堂演示使用：无需上传文件，无需 API Key。")
-st.markdown("</div></div></div>", unsafe_allow_html=True)
-
-if demo_clicked:
-    try:
-        with st.spinner("正在用内置示例材料生成底稿..."):
-            demo_output = _run_cash_workpaper(SAMPLE_MATERIALS_DIR, use_llm=False)
-            _record_result(demo_output, SAMPLE_MATERIALS_DIR, _material_counts(SAMPLE_MATERIALS_DIR))
-        st.success("示例底稿已生成，可以下载或打开输出目录查看。")
-    except Exception as exc:
-        st.error(f"示例生成失败：{exc}")
-
-if "last_output_path" in st.session_state:
-    _render_result_panel()
-
-
-with st.form("workpaper_form", clear_on_submit=False):
-    st.markdown('<div class="panel"><div class="mini-title">1. 上传关键文件</div>', unsafe_allow_html=True)
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        trial_balance_file = st.file_uploader(
-            "试算平衡表",
-            type=["csv", "xlsx", "xls"],
-            help="至少包含：科目/账户、期末余额；有银行、账号、币种会更完整。",
+    if demo_mode == "📊 演示数据（自动生成）":
+        n_days = st.slider("模拟天数", 30, 180, 90, step=30)
+        st.info(
+            f"生成 **2024-10-01** 起 **{n_days} 天**数据\n\n"
+            "**审计主体:** 安克创新股份有限公司\n\n"
+            "**内置异常场景:**\n"
+            "- 🛍️ 黑五大额结算批次\n"
+            "- 📢 双11广告投放超支\n"
+            "- 📦 SKU A2342质量召回退款\n"
+            "- 💱 未授权FX转换操作\n"
+            "- 🗄️ ERP迁移数据缺口\n"
+            "- 📋 会计系统重复入账"
         )
-    with col2:
-        journal_file = st.file_uploader(
-            "序时账",
-            type=["csv", "xlsx", "xls"],
-            help="至少包含：日期、科目编码、科目、借方、贷方、摘要。",
-        )
-    with col3:
-        confirmation_file = st.file_uploader(
-            "询证函回函",
-            type=["csv", "xlsx", "xls"],
-            help="至少包含：银行、账号、回函余额。",
-        )
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown('<div class="panel"><div class="mini-title">2. 案件参数</div>', unsafe_allow_html=True)
-    c1, c2 = st.columns(2)
-    with c1:
-        client_name = st.text_input("客户名称", value="星辰跨境科技(深圳)有限公司")
-        period_end = st.date_input("期末日", value=date(2025, 12, 31))
-        currency = st.selectbox("记账本位币", ["CNY", "USD", "EUR", "HKD"], index=0)
-    with c2:
-        analysis_date = st.date_input("编制日期", value=date.today())
-        te = st.number_input("TE", min_value=0.0, value=5_000_000.0, step=100_000.0)
-        sad = st.number_input("SAD", min_value=0.0, value=250_000.0, step=10_000.0)
-
-    use_llm = st.checkbox(
-        "使用 API 增强风险等级和说明文字",
-        value=False,
-        disabled=not _api_key_configured(),
-        help="默认关闭，避免未脱敏资料离开本机。开启前请确认 .env 已配置 API Key 且资料可外发。",
-    )
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    submitted = st.form_submit_button("生成底稿", type="primary", width="stretch")
-
-
-if submitted:
-    missing_uploads = [
-        label
-        for label, file in (
-            ("试算平衡表", trial_balance_file),
-            ("序时账", journal_file),
-            ("询证函回函", confirmation_file),
-        )
-        if file is None
-    ]
-    if missing_uploads:
-        st.error(f"请先上传：{'、'.join(missing_uploads)}")
     else:
-        try:
-            with st.spinner("正在整理材料并生成底稿..."):
-                materials_dir, counts = _write_materials_package(
-                    client_name=client_name,
-                    period_end=period_end,
-                    analysis_date=analysis_date,
-                    te=te,
-                    sad=sad,
-                    currency=currency,
-                    trial_balance_file=trial_balance_file,
-                    journal_file=journal_file,
-                    confirmation_file=confirmation_file,
-                )
-                output_path = _run_cash_workpaper(materials_dir, use_llm=use_llm)
+        uploaded_file = st.file_uploader(
+            "上传交易 CSV",
+            type=["csv"],
+            help=(
+                "必要列: txn_id, date, platform, currency, "
+                "amount_local, amount_usd, category, description"
+            ),
+        )
 
-            _record_result(output_path, materials_dir, counts)
-            st.success("底稿已生成")
-        except Exception as exc:
-            st.error(f"生成失败：{exc}")
-        if "last_output_path" in st.session_state:
-            _render_result_panel()
-
-
-with st.expander("支持的列名"):
-    st.markdown(
-        """
-系统会自动识别常见中文列名。最小要求：
-
-- 试算平衡表：`科目`、`期末余额`
-- 序时账：`日期`、`科目编码`、`科目`、`借方`、`贷方`、`摘要`
-- 询证函回函：`银行`、`银行账号`、`回函余额`
-
-如果文件已经使用英文列名，也支持项目内部字段名，如 `account_name`、`period_end_balance_local`、`confirmed_balance`。
-""",
+    st.divider()
+    st.subheader("AI 分析")
+    enable_ai = st.toggle("启用 DeepSeek AI 分析", value=True)
+    api_key_input = st.text_input(
+        "DeepSeek API Key",
+        value=DEEPSEEK_API_KEY,
+        type="password",
+        disabled=not enable_ai,
     )
+
+    st.divider()
+    st.caption("📜 合规声明")
+    st.caption("本系统遵循 ISA 240（舞弊风险）及 ISA 520（分析程序）审计准则")
+    st.caption("所有 CRITICAL/HIGH 级别发现均需人工复核")
+
+# ── Header ───────────────────────────────────────────────────────────────────
+st.title("🔍 跨境电商资金流 AI 审计系统")
+
+# Company profile card
+st.markdown("""
+<div style="background:#f0f4ff;border:1px solid #c7d7ff;border-radius:8px;padding:12px 20px;margin-bottom:8px;">
+<b>审计主体：</b>安克创新股份有限公司（Anker Innovations Limited）&nbsp;·&nbsp;
+<b>业务范围：</b>Amazon US / EU / JP · TikTok Shop · Shopify · Walmart · eBay 七平台跨境销售 &nbsp;·&nbsp;
+<b>合规框架：</b>ISA 240（舞弊风险）· ISA 520（分析程序）
+</div>
+""", unsafe_allow_html=True)
+
+col_info, col_badge, col_btn = st.columns([3, 1, 1])
+with col_info:
+    st.markdown(
+        "演示数据覆盖 **2024 Q4**，内置 6 类真实异常场景：\n"
+        "黑五大额结算 · 双11广告超支 · 产品召回退款浪潮 · 未授权FX转换 · ERP数据缺口 · 会计重复入账"
+    )
+with col_badge:
+    if enable_ai:
+        st.success("🤖 DeepSeek 已启用")
+    else:
+        st.warning("⚠️ 离线模式")
+with col_btn:
+    run_clicked = st.button("🚀 开始审计", type="primary", use_container_width=True)
+
+st.divider()
+
+# ── Pipeline ─────────────────────────────────────────────────────────────────
+RISK_STYLE = {
+    "CRITICAL": ("#c62828", "#ffebee", "🔴"),
+    "HIGH":     ("#d84315", "#fff3e0", "🟠"),
+    "MEDIUM":   ("#f9a825", "#fffde7", "🟡"),
+    "LOW":      ("#2e7d32", "#e8f5e9", "🟢"),
+}
+
+if run_clicked:
+    # Input validation
+    if demo_mode == "📁 上传 CSV 文件" and uploaded_file is None:
+        st.error("请先上传 CSV 文件，或切换为演示数据模式。")
+        st.stop()
+
+    run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_dir = REPORTS_DIR / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    with st.status("🔄 正在运行审计流水线...", expanded=True) as pipeline_status:
+
+        # Stage 1 ── Ingest
+        st.write("📥 **Stage 1/5** — 数据摄入...")
+        if demo_mode == "📊 演示数据（自动生成）":
+            df_raw = generate_transactions(n_days=n_days)
+            save_raw_data(df_raw, str(RAW_DATA_DIR))
+        else:
+            df_raw = pd.read_csv(uploaded_file)
+        st.write(f"   ✅ 载入 **{len(df_raw):,}** 条原始交易记录")
+
+        # Stage 2 ── Clean
+        st.write("🧹 **Stage 2/5** — 数据清洗与质量评分...")
+        cleaner = DataCleaner()
+        df_clean, quality_report = cleaner.clean(df_raw)
+        dq = quality_report.stats.get("completeness_pct", 0)
+        st.write(f"   ✅ 清洗完成，数据质量得分: **{dq:.1f}%**")
+
+        # Stage 3 ── Rules
+        st.write("📋 **Stage 3/5** — 规则引擎审计（ISA 240/520）...")
+        detector = RuleBasedAnomalyDetector(thresholds=ANOMALY_THRESHOLDS)
+        findings = detector.run_all_checks(df_clean)
+        rc = Counter(f.risk_level for f in findings)
+        st.write(
+            f"   ✅ 发现 **{len(findings)}** 条审计线索 "
+            f"（{rc.get('CRITICAL',0)} CRITICAL · {rc.get('HIGH',0)} HIGH · "
+            f"{rc.get('MEDIUM',0)} MEDIUM · {rc.get('LOW',0)} LOW）"
+        )
+
+        # Stage 4 ── AI
+        ai_narrative = ""
+        ai_result = {}
+        recon_result = {}
+        if enable_ai and api_key_input:
+            st.write("🤖 **Stage 4/6** — DeepSeek AI 深度分析（可能需 30–60 秒）...")
+            try:
+                classifier = DeepSeekClassifier(api_key=api_key_input)
+                df_clean = classifier.classify_unclassified(df_clean)
+
+                analyst = DeepSeekAuditAnalyst(api_key=api_key_input)
+                summary_json = json.dumps(
+                    detector.to_summary_dict(df_clean), indent=2, default=str
+                )
+                ai_result = analyst.analyze_anomalies(summary_json, ANOMALY_THRESHOLDS)
+
+                if "error" not in ai_result:
+                    overall = ai_result.get("overall_risk", "N/A")
+                    ai_narrative = ai_result.get("summary_narrative", "")
+                    st.write(f"   ✅ AI 分析完成，综合风险评级: **{overall}**")
+                else:
+                    st.warning(f"   ⚠️ AI 返回错误: {ai_result.get('error')} — 继续规则报告")
+                    ai_narrative = "_AI 分析遇到问题，以下为规则引擎报告。_"
+            except Exception as e:
+                st.warning(f"   ⚠️ AI 调用失败: {e}")
+                ai_narrative = f"_AI 分析暂时不可用（{e}）。以下为规则引擎报告。_"
+
+            # Stage 4b ── Settlement Reconciliation
+            st.write("🔗 **Stage 4b/6** — 应收 / 实收资金核对...")
+            try:
+                schedule = generate_settlement_schedule(df_clean)
+                recon_result = analyst.reconcile_settlements(schedule)
+                recon_status = recon_result.get("reconciliation_status", "ERROR")
+                n_unreconciled = len(recon_result.get("unreconciled_items", []))
+                st.write(
+                    f"   ✅ 核对完成: **{recon_status}** — "
+                    f"发现 **{n_unreconciled}** 条未核项"
+                )
+            except Exception as e:
+                st.warning(f"   ⚠️ 资金核对失败: {e}")
+                recon_result = {}
+        else:
+            st.write("   ⏭️ **Stage 4/6** — AI 分析已跳过（离线模式）")
+            ai_narrative = "_未启用 AI 分析。在侧边栏开启 DeepSeek 可获得 AI 叙述报告。_"
+
+        # Stage 5 ── Report
+        st.write("📊 **Stage 5/6** — 生成可视化图表与报告...")
+        viz = ReportVisualizer(output_dir=str(run_dir))
+        chart_paths = viz.generate_all(df_clean, findings)
+
+        report_gen = ReportGenerator(output_dir=str(run_dir))
+        report_path = report_gen.generate(
+            df=df_clean,
+            findings=findings,
+            chart_paths=chart_paths,
+            ai_narrative=ai_narrative,
+            quality_stats=quality_report.stats,
+        )
+        # Save processed CSV alongside report
+        proc_path = run_dir / f"clean_transactions_{run_id}.csv"
+        df_clean.to_csv(proc_path, index=False, encoding="utf-8-sig")
+        st.write(f"   ✅ 报告已保存至 `{run_dir.name}/`")
+
+        # Stage 6 ── Done
+        st.write("🏁 **Stage 6/6** — 完成")
+
+        pipeline_status.update(label="✅ 审计完成！", state="complete")
+
+    st.session_state["audit"] = {
+        "df": df_clean,
+        "findings": findings,
+        "quality_report": quality_report,
+        "chart_paths": chart_paths,
+        "report_path": report_path,
+        "proc_path": str(proc_path),
+        "ai_narrative": ai_narrative,
+        "ai_result": ai_result,
+        "recon_result": recon_result,
+        "run_id": run_id,
+    }
+
+# ── Results display ──────────────────────────────────────────────────────────
+if "audit" not in st.session_state:
+    # Landing placeholder
+    st.info(
+        "👈 在左侧选择数据来源并点击 **🚀 开始审计** 启动流水线。\n\n"
+        "演示模式开箱即用，无需上传文件，约 **5–10 秒**出结果。"
+    )
+    st.stop()
+
+audit = st.session_state["audit"]
+df          = audit["df"]
+findings    = audit["findings"]
+quality_report = audit["quality_report"]
+chart_paths = audit["chart_paths"]
+report_path = audit["report_path"]
+proc_path   = audit["proc_path"]
+ai_narrative = audit["ai_narrative"]
+ai_result   = audit["ai_result"]
+recon_result = audit.get("recon_result", {})
+run_id      = audit["run_id"]
+
+# ── KPI row ──────────────────────────────────────────────────────────────────
+st.subheader("📈 关键财务指标")
+
+revenue  = df[df["category"] == "Product Revenue"]["amount_usd"].sum()
+outflows = df[df["is_outflow"]]["abs_amount_usd"].sum()
+net      = revenue - outflows
+margin   = net / revenue * 100 if revenue > 0 else 0
+rc       = Counter(f.risk_level for f in findings)
+
+k1, k2, k3, k4, k5, k6, k7 = st.columns(7)
+k1.metric("💰 总收入", f"${revenue/1e6:.2f}M")
+k2.metric("📤 总支出", f"${outflows/1e6:.2f}M")
+k3.metric("📊 净利润率", f"{margin:.1f}%")
+k4.metric("🔴 CRITICAL", rc.get("CRITICAL", 0))
+k5.metric("🟠 HIGH",     rc.get("HIGH", 0))
+k6.metric("🟡 MEDIUM",   rc.get("MEDIUM", 0))
+k7.metric("✅ 数据质量", f"{quality_report.stats.get('completeness_pct', 0):.0f}%")
+
+st.divider()
+
+# ── Main content: findings + AI narrative ────────────────────────────────────
+left, right = st.columns([3, 2])
+
+with left:
+    st.subheader(f"🚨 审计发现清单（共 {len(findings)} 条）")
+
+    if not findings:
+        st.success("未发现异常，数据质量良好。")
+    else:
+        for f in sorted(
+            findings,
+            key=lambda x: {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}.get(x.risk_level, 4),
+        ):
+            border, bg, icon = RISK_STYLE.get(f.risk_level, ("#666", "#f5f5f5", "⚪"))
+            impact = f"${f.amount_impact_usd:,.0f}"
+            st.markdown(
+                f"""<div class="finding-card" style="background:{bg};border-left:4px solid {border};">
+                <b>{icon} [{f.finding_id}] {f.risk_level} &nbsp;·&nbsp; {f.rule_name}</b>
+                &nbsp;&nbsp;<span style="color:#555;font-size:0.85em;">影响金额: <b>{impact}</b></span><br>
+                {f.description}
+                </div>""",
+                unsafe_allow_html=True,
+            )
+
+with right:
+    # AI narrative
+    st.subheader("🤖 AI 审计叙述 (DeepSeek)")
+    if ai_narrative.startswith("_"):
+        st.markdown(ai_narrative)
+    else:
+        st.info(ai_narrative)
+
+    # AI supplemental findings
+    ai_extra = ai_result.get("findings", [])
+    if ai_extra:
+        with st.expander(f"📋 AI 补充发现（{len(ai_extra)} 条）", expanded=True):
+            for af in ai_extra:
+                rl = af.get("risk_level", "MEDIUM")
+                border2, bg2, icon2 = RISK_STYLE.get(rl, ("#666", "#f5f5f5", "⚪"))
+                st.markdown(
+                    f"""<div class="finding-card" style="background:{bg2};border-left:3px solid {border2};font-size:0.87rem;">
+                    <b>{icon2} {af.get('finding_id','?')}: {af.get('category','')}</b><br>
+                    {af.get('description','')}<br>
+                    <i style="color:#555;">📌 建议: {af.get('recommended_procedure','')}</i>
+                    </div>""",
+                    unsafe_allow_html=True,
+                )
+
+    # Reconciliation results
+    if recon_result and "unreconciled_items" in recon_result:
+        recon_status = recon_result.get("reconciliation_status", "N/A")
+        items = recon_result.get("unreconciled_items", [])
+        status_color = {"BALANCED": "🟢", "PARTIAL": "🟡", "UNBALANCED": "🔴"}.get(recon_status, "⚪")
+        with st.expander(f"🔗 资金核对结果 {status_color} {recon_status}（{len(items)} 条未核项）", expanded=True):
+            for item in items:
+                flag = "⚠️" if item.get("requires_followup") else "ℹ️"
+                direction = "↑ 流入" if item.get("direction") == "inflow" else "↓ 流出"
+                st.markdown(
+                    f"{flag} **{item.get('item','')}** &nbsp; {direction} &nbsp; "
+                    f"`${item.get('amount_usd', 0):,.0f}` &nbsp;·&nbsp; "
+                    f"{item.get('explanation','')}"
+                )
+            issues = recon_result.get("chain_integrity_issues", [])
+            if issues:
+                st.markdown("**资金链完整性问题：**")
+                for iss in issues:
+                    st.markdown(f"- {iss}")
+
+    # Data quality
+    st.subheader("📋 数据质量摘要")
+    sev_icon = {"CRITICAL": "🔴", "WARNING": "🟡", "INFO": "🔵"}
+    for issue in quality_report.issues:
+        icon_q = sev_icon.get(issue["severity"], "⚪")
+        st.markdown(
+            f"{icon_q} **{issue['severity']}** — `{issue['field']}`: "
+            f"{issue['description']} （n={issue['count']}）"
+        )
+
+st.divider()
+
+# ── Charts ───────────────────────────────────────────────────────────────────
+st.subheader("📊 可视化图表")
+
+tab_cf, tab_pr, tab_cs, tab_sl, tab_ah, tab_rs = st.tabs([
+    "📈 日现金流", "🏪 平台收入", "💸 成本结构",
+    "⏱️ 结算周期", "🌡️ 异常热力图", "⚖️ 风险汇总",
+])
+
+chart_tab_map = {
+    "01_daily_cashflow":       tab_cf,
+    "02_platform_revenue":     tab_pr,
+    "03_cost_structure":       tab_cs,
+    "04_settlement_lag":       tab_sl,
+    "05_anomaly_heatmap":      tab_ah,
+    "06_risk_summary":         tab_rs,
+}
+for key, tab in chart_tab_map.items():
+    with tab:
+        path = chart_paths.get(key)
+        if path and Path(path).exists():
+            st.image(path, use_container_width=True)
+        else:
+            st.caption("图表未生成")
+
+st.divider()
+
+# ── Platform revenue table ────────────────────────────────────────────────────
+st.subheader("🏪 平台收入分布")
+platform_rev = (
+    df[df["category"] == "Product Revenue"]
+    .groupby("platform")["amount_usd"]
+    .sum()
+    .sort_values(ascending=False)
+    .reset_index()
+)
+total_r = platform_rev["amount_usd"].sum()
+platform_rev["占比"] = (platform_rev["amount_usd"] / total_r * 100).map("{:.1f}%".format)
+platform_rev["收入 (USD)"] = platform_rev["amount_usd"].map("${:,.0f}".format)
+st.dataframe(
+    platform_rev[["platform", "收入 (USD)", "占比"]].rename(columns={"platform": "平台"}),
+    use_container_width=True,
+    hide_index=True,
+)
+
+# ── Data preview ─────────────────────────────────────────────────────────────
+with st.expander("🔎 清洗后交易数据预览（前 100 行）"):
+    display_cols = ["txn_id", "date", "platform", "currency", "amount_usd", "category", "description"]
+    avail = [c for c in display_cols if c in df.columns]
+    # Highlight anomaly rows
+    flag_cols = [c for c in df.columns if c.startswith("flag_")]
+    df_view = df[avail].head(100).copy()
+    if flag_cols:
+        df_view["⚠️ 异常标记"] = df[flag_cols].any(axis=1).head(100).map(
+            lambda x: "⚠️" if x else ""
+        )
+    st.dataframe(df_view, use_container_width=True, hide_index=True)
+
+st.divider()
+
+# ── Download buttons ─────────────────────────────────────────────────────────
+st.subheader("📥 下载")
+dl1, dl2, dl3 = st.columns(3)
+
+with dl1:
+    report_text = Path(report_path).read_text(encoding="utf-8")
+    st.download_button(
+        label="📄 下载审计报告 (Markdown)",
+        data=report_text,
+        file_name=f"audit_report_{run_id}.md",
+        mime="text/markdown",
+        use_container_width=True,
+    )
+
+with dl2:
+    csv_data = df.to_csv(index=False, encoding="utf-8")
+    st.download_button(
+        label="📊 下载清洗后数据 (CSV)",
+        data=csv_data,
+        file_name=f"clean_transactions_{run_id}.csv",
+        mime="text/csv",
+        use_container_width=True,
+    )
+
+with dl3:
+    if ai_result:
+        ai_json = json.dumps(ai_result, indent=2, ensure_ascii=False)
+        st.download_button(
+            label="🤖 下载 AI 分析 JSON",
+            data=ai_json,
+            file_name=f"ai_analysis_{run_id}.json",
+            mime="application/json",
+            use_container_width=True,
+        )
+    else:
+        st.button("🤖 AI JSON（未启用）", disabled=True, use_container_width=True)
+
+st.caption(f"Run ID: `{run_id}` · 报告路径: `{report_path}`")

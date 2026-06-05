@@ -78,10 +78,8 @@ def _wait_for_text(cdp: CdpClient, text: str, timeout: int = 60) -> None:
 
 
 def _capture(cdp: CdpClient, path: Path) -> None:
-    metrics = cdp.call("Page.getLayoutMetrics")
-    content = metrics["contentSize"]
-    width = max(1440, int(content["width"]))
-    height = max(1350, int(content["height"]))
+    width = 1440
+    height = 900
     cdp.call(
         "Emulation.setDeviceMetricsOverride",
         {
@@ -95,7 +93,7 @@ def _capture(cdp: CdpClient, path: Path) -> None:
         "Page.captureScreenshot",
         {
             "format": "png",
-            "captureBeyondViewport": True,
+            "captureBeyondViewport": False,
             "fromSurface": True,
         },
     )
@@ -136,14 +134,14 @@ def capture() -> None:
         cdp.call("Page.enable")
         cdp.call("Runtime.enable")
         cdp.call("Page.navigate", {"url": URL})
-        _wait_for_text(cdp, "跨境电商资金流审计 Agent", timeout=30)
+        _wait_for_text(cdp, "跨境电商资金流 AI 审计系统", timeout=30)
         time.sleep(1.5)
         _capture(cdp, ASSET_DIR / "streamlit-demo-home.png")
 
         click_script = """
         (() => {
           const buttons = Array.from(document.querySelectorAll('button'));
-          const button = buttons.find((el) => el.innerText.includes('使用内置示例生成底稿'));
+          const button = buttons.find((el) => el.innerText.includes('开始审计'));
           if (!button) return false;
           button.click();
           return true;
@@ -152,7 +150,7 @@ def capture() -> None:
         result = cdp.call("Runtime.evaluate", {"expression": click_script, "returnByValue": True})
         if not result.get("result", {}).get("value"):
             raise RuntimeError("Demo button was not found.")
-        _wait_for_text(cdp, "示例底稿已生成", timeout=60)
+        _wait_for_text(cdp, "审计完成", timeout=90)
         time.sleep(1.0)
         _capture(cdp, ASSET_DIR / "streamlit-demo-result.png")
     finally:
