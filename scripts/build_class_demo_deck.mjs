@@ -321,20 +321,45 @@ async function slide10(presentation, ctx) {
 async function slide11(presentation, ctx) {
   const slide = presentation.slides.add();
   bg(slide, ctx);
-  title(slide, ctx, "ARCHITECTURE MAP", "把架构讲成四层，听众就能理解它为什么比聊天机器人更可控。", "Speaker B");
-  const layers = [
-    ["确定性外壳", "CLI / Streamlit / Excel 模板 / cell_map", "控制入口、输出格式和公式区写入"],
-    ["证据层", "RAG / 关键词 fallback / 准则片段", "让结论能回到材料和规则"],
-    ["智能层", "Data Extractor / Compliance Checker / Audit Partner", "把不同专业视角拆开"],
-    ["治理层", "mock 默认 / 权限 / 日志 / 人工复核", "控制数据外发和责任边界"],
+  title(slide, ctx, "FLOW + REPO", "一页看懂：业务流程怎么跑，代码结构怎么承接。", "Speaker B");
+  t(slide, ctx, "运行流程", 78, 166, 180, 24, { size: 17, color: C.blue, bold: true });
+  t(slide, ctx, "项目结构", 690, 166, 180, 24, { size: 17, color: C.green, bold: true });
+
+  const flow = [
+    ["输入层", "CSV / PDF / 示例材料\n审计知识片段", C.blue],
+    ["Pipeline", "data_tools 结构化\nRAG 检索与 fallback", C.green],
+    ["Agent 讨论", "Data Extractor\nCompliance Checker\nAudit Partner", C.violet],
+    ["输出层", "Markdown 报告\nExcel 标准底稿\n人工复核点", C.amber],
   ];
-  layers.forEach((l, i) => {
-    const y = 166 + i * 100;
-    box(slide, ctx, 92, y, 1010, 72, { fill: i % 2 === 0 ? C.white : "#f1f5f9", stroke: C.line });
-    t(slide, ctx, l[0], 124, y + 20, 170, 26, { size: 18, color: [C.blue, C.green, C.violet, C.amber][i], bold: true });
-    t(slide, ctx, l[1], 330, y + 16, 350, 26, { size: 16, color: C.ink, bold: true });
-    t(slide, ctx, l[2], 720, y + 17, 330, 26, { size: 14, color: C.muted });
+  flow.forEach((f, i) => {
+    const y = 206 + i * 100;
+    box(slide, ctx, 76, y, 470, 72, { fill: i % 2 === 0 ? C.white : "#f1f5f9", stroke: C.line });
+    t(slide, ctx, f[0], 102, y + 14, 120, 22, { size: 15, color: f[2], bold: true });
+    t(slide, ctx, f[1], 246, y + 13, 260, 42, { size: 13, color: C.ink });
+    if (i < flow.length - 1) t(slide, ctx, "↓", 304, y + 76, 28, 24, { size: 18, color: "#94a3b8", bold: true, align: "center" });
   });
+
+  box(slide, ctx, 608, 206, 548, 380, { fill: "#ffffff", stroke: C.line });
+  const tree = [
+    ["audit_rag/", "核心能力包", C.blue],
+    ["  agents.py", "三 Agent 提示词 / mock 响应", C.violet],
+    ["  pipeline.py", "流程编排：材料 → RAG → Agent", C.green],
+    ["  rag.py", "ChromaDB 检索 + 关键词 fallback", C.green],
+    ["  data_tools.py", "凭证加载与风险规则扫描", C.amber],
+    ["  reporting.py", "Markdown 工作底稿草稿", C.blue],
+    ["cli.py / streamlit_app.py", "命令行入口 / 课堂前端", C.blue],
+    ["benchmarks/", "合成材料与隔离评测设计", C.red],
+    ["outputs/", "生成报告与 Excel 底稿", C.green],
+    ["docs/ & assets/", "README 截图、Logo、说明文档", C.violet],
+  ];
+  tree.forEach((row, i) => {
+    const y = 228 + i * 32;
+    t(slide, ctx, row[0], 636, y, 210, 22, { size: 12.5, color: row[2], bold: i === 0 || !row[0].startsWith("  "), face: "Consolas" });
+    t(slide, ctx, row[1], 858, y, 260, 22, { size: 12.5, color: C.muted });
+  });
+
+  box(slide, ctx, 138, 606, 904, 48, { fill: "#eff6ff", stroke: "#bfdbfe" });
+  t(slide, ctx, "讲法：左边说明数据和证据如何流动，右边说明每一层在仓库里对应哪些文件，避免只讲概念不讲工程落点。", 172, 620, 836, 22, { size: 17, color: C.ink, bold: true, align: "center" });
   footer(slide, ctx, 11);
   return slide;
 }
